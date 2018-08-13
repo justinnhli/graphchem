@@ -473,14 +473,14 @@ class ReactionNetwork:
 
 
 def main():
-    """Synthesize some molecules."""
+    """Example synthesis of methanol."""
     reactions = dedent("""
         CO2 + H2 = HCOOH
         CO + H2O = HCOOH
         HCOOH + H2 = CH2O + H2O
         CH2O + H2 = CH3OH
         CH3OH + H2 = CH4 + H2O
-        CO + 2H2 = CH3OH
+        CO + 2 H2 = CH3OH
     """).strip().splitlines()
     reactions = [reaction for reaction in reactions if reaction]
     network = ReactionNetwork(reactions)

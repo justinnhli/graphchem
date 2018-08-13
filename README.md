@@ -19,7 +19,7 @@ Using the following reactions:
     HCOOH + H2 = CH2O + H2O
     CH2O + H2 = CH3OH
     CH3OH + H2 = CH4 + H2O
-    CO + 2H2 = CH3OH
+    CO + 2 H2 = CH3OH
 
 If we start with initial (umlimited) amounts of carbon monoxide (CO), hydrogen gas (H2), and water (H20), and try to synthesize methanol (CH3OH), GraphChem will find a total of two synthesis pathways:
 

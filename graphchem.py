@@ -222,6 +222,10 @@ class Reaction:
         return [product.count for product in self.product_counts]
 
     def _integerize(self):
+        """Convert reaction equation to integers.
+
+        This function does not reduce the coefficients to the smallest values.
+        """
         multiplier = least_common_mulitple(
             *(coeff.as_integer_ratio()[1] for coeff in self.reactant_coefficients),
             *(coeff.as_integer_ratio()[1] for coeff in self.product_coefficients),
@@ -236,6 +240,7 @@ class Reaction:
         ]
 
     def _check_equality(self):
+        """Check that atoms are conserved in this reaction."""
         reactants_counter = Counter()
         for count, molecule in self.reactant_counts:
             for _ in range(count):
@@ -292,6 +297,53 @@ class ReactionNetwork:
     The actual network is a directed bipartite graph of molecules (alternately,
     reactants and products) and chemical reactions.
 
+    The search algorithm in synthesize() is modified breadth first search, and
+    consists of a loop with two phases:
+
+    1. Based on the available reactants, check which reactions will trigger.
+    2. Based on these reactions, check which new reactants are available.
+
+    One insight that helps with efficiency is noticing that, at each step, we
+    only care about which _new_ reactants are available.  Any reaction that
+    does not use those reactants either have already triggered, or could not be
+    triggered at this step.
+
+    Dynamic programming is used to collect all the reactions necessary to
+    synthesize a product. Associated with each molecule is the set of pathways
+    (each itself a set of reactions) that could synthesize it. This is most
+    easily explained with a recurrence relation. First, initial reactants have
+    the set of an empty pathway.  This is to differentiate them from reactants
+    that have yet to be synthesized, which would have no pathways (the empty
+    set).
+
+    Whenever a reaction is triggered, the products then get their pathways
+    updated. Because each reactant of that reaction could have multiple
+    pathways, each of those possible pathways must be taken into account. For
+    example, for a reaction A + B + C = D + E, and A, B, and C has 2, 3, and 3
+    synthesis pathways respectively, then D and E would have 2 * 3 * 3 + 1 = 19
+    synthesis pathways.
+
+    For formally, we can define a molecule m and its synthesis pathways
+    paths(m).  Similarly, we might write that a reaction r has reactants
+    pred(r) and products succ(r). Then we initialize:
+
+    paths(m) =
+        {{}}    if m is an initial reactant
+        {}        otherwise
+
+    When a reaction r is triggered, then for all m in succ(r),
+    
+    paths(m) = union(
+        paths(m),
+        { union(P, {r}) where
+            P is in the unordered product of paths(n) where n in pred(r) }
+    )
+
+    Or in LaTeX:
+        
+    paths(m) \cup \left\{
+        P  \cup \{r\} : P \in \Pi_{n \in pred(r)} paths(n)
+    \right\}
     """
 
     REACTION_PARSER = ReactionWalker()
@@ -333,10 +385,19 @@ class ReactionNetwork:
                 self.graph.add_edge(reaction_str, product_str)
 
     def _reset_synthesis(self):
+        """Reset the graph from the previous synthesis."""
         for node in self.graph.nodes:
             self.graph.nodes[node]['pathways'] = set()
 
     def _all_reactants_synthesized(self, reaction):
+        """Check if a reaction has all its reactants synthesized.
+
+        Arguments:
+            reaction (str): The reaction to check.
+
+        Returns:
+            bool: True all the reaction's reactants are have been synthesized.
+        """
         return (
             self.graph.nodes[reaction]['triggered'] or 
             all(
@@ -346,6 +407,14 @@ class ReactionNetwork:
         )
 
     def _trigger_new_reactions(self, reactant):
+        """Identify reactions that were only missing a given reactant.
+
+        Arguments:
+            reactants (str): A reactant.
+
+        Returns:
+            Set[str]: The reactions that are newly triggered
+        """
         reactions = set()
         for _, reaction in self.graph.out_edges(reactant):
             if self._all_reactants_synthesized(reaction):
@@ -354,6 +423,14 @@ class ReactionNetwork:
         return reactions
 
     def _synthesize_new_reactants(self, reaction):
+        """Mark new reactants as synthesized.
+
+        Arguments:
+            reaction (str): The reaction to check.
+
+        Returns:
+            Set[str]: The new products that are now synthesizable.
+        """
         return set(
             product for _, product in self.graph.out_edges(reaction)
             if not self.graph.nodes[product]['pathways']
@@ -365,6 +442,14 @@ class ReactionNetwork:
             self.graph.nodes[product]['pathways'] |= new_product_networks
 
     def _chain_synthesis_pathways(self, reaction):
+        """Determine the synthesis pathway of a reaction.
+
+        Arguments:
+            reaction (str): The reaction to check.
+
+        Returns:
+            Set[FrozenSet[str]]: All the synthesis pathways of this reaction.
+        """
         reactant_networks = [
             self.graph.nodes[reactant]['pathways']
             for reactant in self.graph.predecessors(reaction)
@@ -411,7 +496,7 @@ class ReactionNetwork:
         Returns:
             str: A Graphviz description of the reaction network.
         """
-        # colors from Bokeh palettes Set1
+        # from Bokeh palettes Set1
         colors = ['#E41A1C', '#377EB8', '#4DAF4A', '#984EA3', '#FF7F00', '#FFFF33', '#A65628', '#F781BF', '#999999']
         synthesis = final_product and initial_reactants
         # begin graphviz output

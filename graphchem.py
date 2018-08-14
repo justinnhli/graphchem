@@ -402,7 +402,7 @@ class ReactionNetwork:
             self.graph.nodes[reaction]['triggered'] or 
             all(
                 len(self.graph.nodes[reactant]['pathways']) > 0
-                for reactant, _ in self.graph.in_edges(reaction)
+                for reactant in self.graph.predecessors(reaction)
             )
         )
 
@@ -416,7 +416,7 @@ class ReactionNetwork:
             Set[str]: The reactions that are newly triggered
         """
         reactions = set()
-        for _, reaction in self.graph.out_edges(reactant):
+        for reaction in self.graph.successors(reactant):
             if self._all_reactants_synthesized(reaction):
                 self.graph.nodes[reaction]['triggered'] = True
                 reactions.add(reaction)
@@ -432,13 +432,13 @@ class ReactionNetwork:
             Set[str]: The new products that are now synthesizable.
         """
         return set(
-            product for _, product in self.graph.out_edges(reaction)
+            product for product in self.graph.successors(reaction)
             if not self.graph.nodes[product]['pathways']
         )
 
     def _propagate_synthesis_pathways(self, reaction):
         new_product_networks = self._chain_synthesis_pathways(reaction)
-        for _, product in self.graph.out_edges(reaction):
+        for product in self.graph.successors(reaction):
             self.graph.nodes[product]['pathways'] |= new_product_networks
 
     def _chain_synthesis_pathways(self, reaction):
@@ -474,16 +474,14 @@ class ReactionNetwork:
             reactant_node = self.graph.nodes[reactant]
             reactant_node['pathways'] = set([frozenset()])
         new_reactants = set(reactants)
-        wave = 1
         while new_reactants:
             reactions = set()
             for reactant in new_reactants:
-                reactions = reactions.union(self._trigger_new_reactions(reactants))
+                reactions = reactions.union(self._trigger_new_reactions(reactant))
             new_reactants = set()
             for reaction in reactions:
                 new_reactants = new_reactants.union(self._synthesize_new_reactants(reaction))
                 self._propagate_synthesis_pathways(reaction)
-            wave += 1
         yield from self.graph.nodes[product]['pathways']
 
     def to_dot(self, final_product='', *initial_reactants): # pylint: disable = keyword-arg-before-vararg
@@ -537,14 +535,14 @@ class ReactionNetwork:
         if synthesis:
             dot.append('    # SYNTHESIS PATHWAYS')
             dot.append('')
-            syn_nets = self.synthesize(final_product, *initial_reactants)
-            syn_nets = sorted(syn_nets, key=(lambda net: (len(net), sum(len(eq) for eq in net))))
-            for syn_index, syn_net in enumerate(syn_nets, start=1):
-                dot.append(f'    # pathway {syn_index}:')
-                color = colors[(syn_index - 1) % len(colors)]
-                for reaction_str in syn_net:
+            pathways = self.synthesize(final_product, *initial_reactants)
+            pathways = sorted(pathways, key=(lambda net: (len(net), sum(len(eq) for eq in net))))
+            for index, pathway in enumerate(pathways, start=1):
+                dot.append(f'    # pathway {index}:')
+                color = colors[(index - 1) % len(colors)]
+                for reaction_str in pathway:
                     dot.append(f'    #   {reaction_str}')
-                for reaction_str in syn_net:
+                for reaction_str in pathway:
                     reaction = self.REACTION_PARSER.parse(reaction_str)
                     for reactant in reaction.reactants:
                         dot.append(f'    "{reactant}" -> "{reaction}" [color="{color}"]')
@@ -588,13 +586,13 @@ def main():
     print(network.to_dot(final_product, *initial_reactants))
     print()
 
-    syn_nets = network.synthesize(final_product, *initial_reactants)
-    syn_nets = sorted(syn_nets, key=(lambda net: (len(net), sum(len(eq) for eq in net))))
-    print(f'{len(syn_nets)} synthesis pathways found:')
+    pathways = network.synthesize(final_product, *initial_reactants)
+    pathways = sorted(pathways, key=(lambda net: (len(net), sum(len(eq) for eq in net))))
+    print(f'{len(pathways)} synthesis pathways found:')
     print()
-    for index, syn_net in enumerate(syn_nets, start=1):
+    for index, pathway in enumerate(pathways, start=1):
         print(f'pathway {index}:')
-        for reaction in sorted(syn_net, key=len):
+        for reaction in sorted(pathway, key=(lambda s: (len(s), s))):
             print(f'    {reaction}')
         print()
 

@@ -39,11 +39,27 @@ def least_common_mulitple(*ints):
 
 
 def molecule_key(string):
+    """Key for comparing molecule strings.
+
+    Arguments:
+        string (str): The molecular formula.
+
+    Returns:
+        Tuple[int, str]: The key.
+    """
     return len(string), string
 
 
 def pathway_key(pathway):
-    return len(pathway), sum(len(eq) for eq in pathway)
+    """Key for comparing synthesis pathways.
+
+    Arguments:
+        pathway (Sequence[str]): A list of reaction equations.
+
+    Returns:
+        Tuple[int, int]: The key.
+    """
+    return len(pathway), sum(len(reaction) for reaction in pathway)
 
 
 class ReactionWalker(ASTWalker):
@@ -587,7 +603,7 @@ class ReactionNetwork:
 
 
 def test():
-
+    """Test for ReactionNetwork."""
     def pretty_string(pathways):
         lines = []
         pathways = sorted(pathways, key=pathway_key)
@@ -596,6 +612,7 @@ def test():
             for reaction in sorted(pathway, key=molecule_key):
                 lines.append(reaction)
         return '\n'.join(lines)
+
     reactions = dedent('''
         CO2 + H2 = HCOOH
         CO + H2O = HCOOH
@@ -639,7 +656,7 @@ def test():
 
 
 def main():
-    """Example synthesis of methanol."""
+    """Demonstrate the synthesis of methanol."""
     reactions = dedent("""
         CO2 + H2 = HCOOH
         CO + H2O = HCOOH

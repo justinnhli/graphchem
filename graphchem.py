@@ -50,6 +50,18 @@ def molecule_key(string):
     return len(string), string
 
 
+def reaction_key(string):
+    """Key for comparing reaction equations.
+
+    Arguments:
+        string (str): The reaction equation.
+
+    Returns:
+        Tuple[int, str]: The key.
+    """
+    return len(string), string
+
+
 def pathway_key(pathway):
     """Key for comparing synthesis pathways.
 
@@ -545,7 +557,7 @@ class ReactionNetwork:
                 node for node in self.graph.nodes
                 if self.graph.nodes[node]['type'] == 'reaction'
             ],
-            key=molecule_key,
+            key=reaction_key,
         )
         # draw special nodes (all reactions, synthesis reactants and products)
         dot.append('    # PREAMBLE')
@@ -577,10 +589,10 @@ class ReactionNetwork:
             for index, pathway in enumerate(pathways, start=1):
                 dot.append(f'    # pathway {index}:')
                 color = colors[(index - 1) % len(colors)]
-                for reaction_str in sorted(pathway, key=molecule_key):
+                for reaction_str in sorted(pathway, key=reaction_key):
                     dot.append(f'    #   {reaction_str}')
                 dot.append(f'    edge [color="{color}"]')
-                for reaction_str in sorted(pathway, key=molecule_key):
+                for reaction_str in sorted(pathway, key=reaction_key):
                     reaction = self.reactions[reaction_str]
                     for reactant in sorted(reaction.reactants):
                         dot.append(f'    "{reactant}" -> "{reaction}"')
@@ -596,9 +608,9 @@ class ReactionNetwork:
             if reaction_str in used_reactions:
                 continue
             dot.append(f'    # {reaction_str}')
-            for reactant_str in sorted(self.graph.predecessors(reaction_str), key=molecule_key):
+            for reactant_str in sorted(self.graph.predecessors(reaction_str), key=reaction_key):
                 dot.append(f'    "{reactant_str}" -> "{reaction_str}"')
-            for product_str in sorted(self.graph.successors(reaction_str), key=molecule_key):
+            for product_str in sorted(self.graph.successors(reaction_str), key=reaction_key):
                 dot.append(f'    "{reaction_str}" -> "{product_str}"')
             dot.append('')
         dot.append('}')
@@ -612,7 +624,7 @@ def test():
         pathways = sorted(pathways, key=pathway_key)
         for index, pathway in enumerate(pathways, start=1):
             lines.append(str(index))
-            for reaction in sorted(pathway, key=molecule_key):
+            for reaction in sorted(pathway, key=reaction_key):
                 lines.append(reaction)
         return '\n'.join(lines)
 
@@ -703,7 +715,7 @@ def main():
     print()
     for index, pathway in enumerate(pathways, start=1):
         print(f'pathway {index}:')
-        for reaction in sorted(pathway, key=molecule_key):
+        for reaction in sorted(pathway, key=reaction_key):
             print(f'    {reaction}')
         print()
 

@@ -303,7 +303,7 @@ class Reaction:
 
 
 class ReactionNetwork:
-    """A network of chemical reactions.
+    r"""A network of chemical reactions.
 
     The actual network is a directed bipartite graph of molecules (alternately,
     reactants and products) and chemical reactions.
@@ -343,7 +343,7 @@ class ReactionNetwork:
         {}        otherwise
 
     When a reaction r is triggered, then for all m in succ(r),
-    
+
     paths(m) = union(
         paths(m),
         { union(P, {r}) where
@@ -351,7 +351,7 @@ class ReactionNetwork:
     )
 
     Or in LaTeX:
-        
+
     paths(m) \cup \left\{
         P  \cup \{r\} : P \in \Pi_{n \in pred(r)} paths(n)
     \right\}
@@ -410,7 +410,7 @@ class ReactionNetwork:
             bool: True all the reaction's reactants are have been synthesized.
         """
         return (
-            self.graph.nodes[reaction]['triggered'] or 
+            self.graph.nodes[reaction]['triggered'] or
             all(
                 len(self.graph.nodes[reactant]['pathways']) > 0
                 for reactant in self.graph.predecessors(reaction)
@@ -421,7 +421,7 @@ class ReactionNetwork:
         """Identify reactions that were only missing a given reactant.
 
         Arguments:
-            reactants (str): A reactant.
+            reactant (str): A reactant.
 
         Returns:
             Set[str]: The reactions that are newly triggered
@@ -512,6 +512,7 @@ class ReactionNetwork:
         Returns:
             str: A Graphviz description of the reaction network.
         """
+        # pylint: disable = too-many-branches
         # from Bokeh palettes Set1
         colors = ['#E41A1C', '#377EB8', '#4DAF4A', '#984EA3', '#FF7F00', '#FFFF33', '#A65628', '#F781BF', '#999999']
         synthesis = final_product and initial_reactants

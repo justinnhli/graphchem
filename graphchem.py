@@ -38,6 +38,14 @@ def least_common_mulitple(*ints):
     return result
 
 
+def molecule_key(string):
+    return len(string), string
+
+
+def pathway_key(pathway):
+    return len(pathway), sum(len(eq) for eq in pathway)
+
+
 class ReactionWalker(ASTWalker):
     """A parser for chemical reactions."""
 
@@ -160,6 +168,9 @@ class Molecule:
 
     def __eq__(self, other):
         return str(self) == str(other)
+
+    def __lt__(self, other):
+        return (len(str(self)), str(self)) < (len(str(other)), str(other))
 
     def __hash__(self):
         return hash(str(self))
@@ -508,7 +519,7 @@ class ReactionNetwork:
                 node for node in self.graph.nodes
                 if self.graph.nodes[node]['type'] == 'reaction'
             ],
-            key=len,
+            key=molecule_key,
         )
         # draw special nodes (all reactions, synthesis reactants and products)
         dot.append('    # PREAMBLE')
@@ -535,18 +546,18 @@ class ReactionNetwork:
         if synthesis:
             dot.append('    # SYNTHESIS PATHWAYS')
             dot.append('')
-            pathways = self.synthesize(final_product, *initial_reactants)
-            pathways = sorted(pathways, key=(lambda net: (len(net), sum(len(eq) for eq in net))))
+            pathways = set(self.synthesize(final_product, *initial_reactants))
+            pathways = sorted(pathways, key=pathway_key)
             for index, pathway in enumerate(pathways, start=1):
                 dot.append(f'    # pathway {index}:')
                 color = colors[(index - 1) % len(colors)]
-                for reaction_str in pathway:
+                for reaction_str in sorted(pathway, key=molecule_key):
                     dot.append(f'    #   {reaction_str}')
-                for reaction_str in pathway:
+                for reaction_str in sorted(pathway, key=molecule_key):
                     reaction = self.REACTION_PARSER.parse(reaction_str)
-                    for reactant in reaction.reactants:
+                    for reactant in sorted(reaction.reactants):
                         dot.append(f'    "{reactant}" -> "{reaction}" [color="{color}"]')
-                    for product in reaction.products:
+                    for product in sorted(reaction.products):
                         dot.append(f'    "{reaction}" -> "{product}" [color="{color}"]')
                     used_reactions.add(reaction_str)
                 dot.append('')
@@ -558,9 +569,9 @@ class ReactionNetwork:
             if reaction_str in used_reactions:
                 continue
             dot.append(f'    # {reaction_str}')
-            for reactant_str in self.graph.predecessors(reaction_str):
+            for reactant_str in sorted(self.graph.predecessors(reaction_str), key=molecule_key):
                 dot.append(f'    "{reactant_str}" -> "{reaction_str}"')
-            for product_str in self.graph.successors(reaction_str):
+            for product_str in sorted(self.graph.successors(reaction_str), key=molecule_key):
                 dot.append(f'    "{reaction_str}" -> "{product_str}"')
             dot.append('')
         dot.append('}')
@@ -587,12 +598,12 @@ def main():
     print()
 
     pathways = network.synthesize(final_product, *initial_reactants)
-    pathways = sorted(pathways, key=(lambda net: (len(net), sum(len(eq) for eq in net))))
+    pathways = sorted(pathways, key=pathway_key)
     print(f'{len(pathways)} synthesis pathways found:')
     print()
     for index, pathway in enumerate(pathways, start=1):
         print(f'pathway {index}:')
-        for reaction in sorted(pathway, key=(lambda s: (len(s), s))):
+        for reaction in sorted(pathway, key=molecule_key):
             print(f'    {reaction}')
         print()
 

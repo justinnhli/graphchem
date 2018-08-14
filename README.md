@@ -4,7 +4,7 @@ GraphChem finds all possible synthesis pathways for a product given takes a set 
 
 ## Running
 
-GraphChem requires Python 3 and the [networkx] package. Once networkx is installed, the following will run the demo below:
+GraphChem requires [Python 3] and the [networkx] package. Once networkx is installed, the following will run the demo below:
 
     git clone git@github.com:justinnhli/graphchem.git
     cd graphchem
@@ -39,3 +39,4 @@ Additionally, GraphChem can generate a [GraphViz] reaction network visualization
 
 [GraphViz]: https://www.graphviz.org/
 [networkx]: https://networkx.github.io/
+[Python 3]: https://www.python.org/

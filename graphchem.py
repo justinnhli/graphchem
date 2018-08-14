@@ -411,7 +411,7 @@ class ReactionNetwork:
             str: A Graphviz description of the reaction network.
         """
         # colors from Bokeh palettes Set1
-        colors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999']
+        colors = ['#E41A1C', '#377EB8', '#4DAF4A', '#984EA3', '#FF7F00', '#FFFF33', '#A65628', '#F781BF', '#999999']
         synthesis = final_product and initial_reactants
         # begin graphviz output
         dot = []

@@ -657,16 +657,36 @@ def test():
     ])
 
 
+SMALL_REACTION_SET = [
+    'CO2 + H2 = HCOOH',
+    'CO + H2O = HCOOH',
+    'HCOOH + H2 = CH2O + H2O',
+    'CH2O + H2 = CH3OH',
+    'CH3OH + H2 = CH4 + H2O',
+    'CO + 2 H2 = CH3OH',
+]
+
+LARGE_REACTION_SET = [
+    'CO2 + H2 = HCOOH',
+    'CO + H2O = HCOOH',
+    'HCOOH + H2 = CH2O + H2O',
+    'CH2O + H2 = CH3OH',
+    'CH3OH + H2 = CH4 + H2O',
+    '2 CO2 + 2 H2 = 2 CH2O + O2',
+    '2 CO2 + 4 H2 = 2 CH3OH + O2',
+    'CO2 + 4 H2 = CH4 + 2 H2O',
+    '2 HCOOH + 2 H2 = 2 CH3OH + O2',
+    'HCOOH + H2 = CH4 + O2',
+    'CH2O + 2 H2 = CH4 + H2O',
+    '2 CO + O2 = 2 CO2',
+    'CO + H2 = CH2O',
+    'CO + 2 H2 = CH3OH',
+    'CO + 3 H2 = CH4 + H2O',
+]
+
 def main():
     """Demonstrate the synthesis of methanol."""
-    reactions = dedent('''
-        CO2 + H2 = HCOOH
-        CO + H2O = HCOOH
-        HCOOH + H2 = CH2O + H2O
-        CH2O + H2 = CH3OH
-        CH3OH + H2 = CH4 + H2O
-        CO + 2 H2 = CH3OH
-    ''')strip().splitlines()
+    reactions = SMALL_REACTION_SET
     reactions = [reaction for reaction in reactions if reaction]
     network = ReactionNetwork(reactions)
 

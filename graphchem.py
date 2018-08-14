@@ -354,14 +354,15 @@ class ReactionNetwork:
         return reactions
 
     def _synthesize_new_reactants(self, reaction):
-        reactants = set()
+        return set(
+            product for _, product in self.graph.out_edges(reaction)
+            if not self.graph.nodes[product]['synthesis_pathways']
+        )
+
+    def _propagate_synthesis_pathways(self, reaction):
         new_product_networks = self._chain_synthesis_pathways(reaction)
         for _, product in self.graph.out_edges(reaction):
-            product_node = self.graph.nodes[product]
-            if not product_node['synthesis_pathways']:
-                reactants.add(product)
-            product_node['synthesis_pathways'] |= new_product_networks
-        return reactants
+            self.graph.nodes[product]['synthesis_pathways'] |= new_product_networks
 
     def _chain_synthesis_pathways(self, reaction):
         reactant_networks = [
@@ -397,6 +398,7 @@ class ReactionNetwork:
             new_reactants = set()
             for reaction in reactions:
                 new_reactants = new_reactants.union(self._synthesize_new_reactants(reaction))
+                self._propagate_synthesis_pathways(reaction)
             wave += 1
         yield from self.graph.nodes[product]['synthesis_pathways']
 

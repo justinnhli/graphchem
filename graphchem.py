@@ -585,6 +585,58 @@ class ReactionNetwork:
         return '\n'.join(dot)
 
 
+def test():
+
+    def pretty_string(pathways):
+        lines = []
+        pathways = sorted(pathways, key=pathway_key)
+        for index, pathway in enumerate(pathways, start=1):
+            lines.append(str(index))
+            for reaction in sorted(pathway, key=molecule_key):
+                lines.append(reaction)
+        return '\n'.join(lines)
+    reactions = dedent('''
+        CO2 + H2 = HCOOH
+        CO + H2O = HCOOH
+        HCOOH + H2 = CH2O + H2O
+        CH2O + H2 = CH3OH
+        CH3OH + H2 = CH4 + H2O
+        CO + 2 H2 = CH3OH
+    ''').strip().splitlines()
+    reactions = [reaction for reaction in reactions if reaction]
+    network = ReactionNetwork(reactions)
+    actual = set(network.synthesize('CH3OH', 'CO', 'H2', 'H2O'))
+    expected = set([
+        frozenset({
+            'CO + 2 H2 = CH3OH',
+        }),
+        frozenset({
+            'CO + H2O = HCOOH',
+            'CH2O + H2 = CH3OH',
+            'HCOOH + H2 = CH2O + H2O',
+        }),
+        frozenset({
+            'CO + H2O = HCOOH',
+            'CH2O + H2 = CH3OH',
+            'CH3OH + H2 = CH4 + H2O',
+            'HCOOH + H2 = CH2O + H2O',
+        }),
+        frozenset({
+            'CO + H2O = HCOOH',
+            'CH2O + H2 = CH3OH',
+            'CO + 2 H2 = CH3OH',
+            'CH3OH + H2 = CH4 + H2O',
+            'HCOOH + H2 = CH2O + H2O',
+        }),
+    ])
+    assert actual == expected, '\n\n'.join([
+        'Expected:',
+        pretty_string(expected),
+        'but got:',
+        pretty_string(actual),
+    ])
+
+
 def main():
     """Example synthesis of methanol."""
     reactions = dedent("""
@@ -616,4 +668,5 @@ def main():
 
 
 if __name__ == '__main__':
+    test()
     main()

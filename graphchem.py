@@ -535,7 +535,6 @@ class ReactionNetwork:
         # begin graphviz output
         dot = []
         dot.append('digraph {')
-        dot.append('    node [fontsize=20]')
         dot.append('')
         # pre-calculate list of reactions
         reaction_strs = sorted(
@@ -547,28 +546,28 @@ class ReactionNetwork:
         )
         # draw special nodes (all reactions, synthesis reactants and products)
         dot.append('    # PREAMBLE')
+        dot.append('    node [fontsize=20, style=filled]')
         dot.append('')
         if synthesis:
             dot.append('    # initial reactants')
-            dot.append('    node [shape=oval, style=filled, color="#73D216"]')
+            dot.append('    node [shape=oval, fillcolor="#CCFFAA"]')
             for reactant in initial_reactants:
-                dot.append(f'    "{reactant}" [label=<<b>{reactant}</b>>]')
+                dot.append(f'    "{reactant}"')
             dot.append('')
             dot.append('    # final product')
-            dot.append('    node [shape=octagon, style=filled, color="#EF2929"]')
-            dot.append(f'    "{final_product}" [label=<<b>{final_product}</b>>]')
+            dot.append('    node [shape=octagon, fillcolor="#FFBFCF"]')
+            dot.append(f'    "{final_product}"')
             dot.append('')
         dot.append('    # all reactions')
-        dot.append('    node [shape=box, style=solid, color="#000000"]')
+        dot.append('    node [shape=box, fillcolor="#FFFFFF"]')
         for reaction in reaction_strs:
             dot.append(f'    "{reaction}"')
-        dot.append('')
-        dot.append('    node [shape=none]')
         dot.append('')
         # color code synthesis networks
         used_reactions = set()
         if synthesis:
             dot.append('    # SYNTHESIS PATHWAYS')
+            dot.append('    node [shape=none, style=""]')
             dot.append('')
             pathways = set(self.synthesize(final_product, *initial_reactants))
             pathways = sorted(pathways, key=pathway_key)
@@ -577,12 +576,13 @@ class ReactionNetwork:
                 color = colors[(index - 1) % len(colors)]
                 for reaction_str in sorted(pathway, key=molecule_key):
                     dot.append(f'    #   {reaction_str}')
+                dot.append(f'    edge [color="{color}"]')
                 for reaction_str in sorted(pathway, key=molecule_key):
-                    reaction = self.REACTION_PARSER.parse(reaction_str)
+                    reaction = self.reactions[reaction_str]
                     for reactant in sorted(reaction.reactants):
-                        dot.append(f'    "{reactant}" -> "{reaction}" [color="{color}"]')
+                        dot.append(f'    "{reactant}" -> "{reaction}"')
                     for product in sorted(reaction.products):
-                        dot.append(f'    "{reaction}" -> "{product}" [color="{color}"]')
+                        dot.append(f'    "{reaction}" -> "{product}"')
                     used_reactions.add(reaction_str)
                 dot.append('')
         # color code remainder of network

@@ -347,8 +347,9 @@ class ReactionNetwork:
     updated. Because each reactant of that reaction could have multiple
     pathways, each of those possible pathways must be taken into account. For
     example, for a reaction A + B + C = D + E, and A, B, and C has 2, 3, and 3
-    synthesis pathways respectively, then D and E would have 2 * 3 * 3 + 1 = 19
-    synthesis pathways.
+    synthesis pathways respectively, then D and E would have 2 * 3 * 3 = 18
+    synthesis pathways - the cross-product of all pathways of the reactants,
+    each with the addition of the current reaction.
 
     For formally, we can define a molecule m and its synthesis pathways
     paths(m).  Similarly, we might write that a reaction r has reactants
@@ -356,7 +357,7 @@ class ReactionNetwork:
 
     paths(m) =
         {{}}    if m is an initial reactant
-        {}        otherwise
+        {}      otherwise
 
     When a reaction r is triggered, then for all m in succ(r),
 

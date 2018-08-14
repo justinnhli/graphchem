@@ -310,7 +310,11 @@ class ReactionNetwork:
         for reaction_str in reaction_strs:
             reaction = self.REACTION_PARSER.parse(reaction_str)
             reaction_str = str(reaction)
-            self.graph.add_node(reaction_str, type='reaction')
+            self.graph.add_node(
+                reaction_str,
+                type='reaction',
+                ready=False,
+            )
             for reactant in reaction.reactants:
                 reactant_str = str(reactant)
                 self.graph.add_node(
@@ -333,9 +337,12 @@ class ReactionNetwork:
             self.graph.nodes[node]['synthesis_pathways'] = set()
 
     def _all_reactants_synthesized(self, reaction):
-        return all(
-            len(self.graph.nodes[reactant]['synthesis_pathways']) > 0
-            for reactant, _ in self.graph.in_edges(reaction)
+        return (
+            self.graph.nodes[reaction]['ready'] or 
+            all(
+                len(self.graph.nodes[reactant]['synthesis_pathways']) > 0
+                for reactant, _ in self.graph.in_edges(reaction)
+            )
         )
 
     def _find_new_reactions(self, reactants):
@@ -343,6 +350,7 @@ class ReactionNetwork:
         for reactant in reactants:
             for _, reaction in self.graph.out_edges(reactant):
                 if self._all_reactants_synthesized(reaction):
+                    self.graph.nodes[reaction]['ready'] = True
                     reactions.add(reaction)
         return reactions
 

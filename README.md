@@ -21,9 +21,9 @@ Using the following reactions:
     CH3OH + H2 = CH4 + H2O
     CO + 2 H2 = CH3OH
 
-If we start with initial (umlimited) amounts of carbon monoxide (CO), hydrogen gas (H2), and water (H20), and try to synthesize methanol (CH3OH), GraphChem will find a total of two synthesis pathways:
+If we start with initial (umlimited) amounts of carbon monoxide (CO), hydrogen gas (H2), and water (H20), and try to synthesize methanol (CH3OH), GraphChem will find a total of four synthesis pathways:
 
-    2 synthesis pathways found:
+    4 synthesis pathways found:
 
     pathway 1:
         CO + 2 H2 = CH3OH
@@ -31,6 +31,19 @@ If we start with initial (umlimited) amounts of carbon monoxide (CO), hydrogen g
     pathway 2:
         CO + H2O = HCOOH
         CH2O + H2 = CH3OH
+        HCOOH + H2 = CH2O + H2O
+
+    pathway 3:
+        CO + H2O = HCOOH
+        CH2O + H2 = CH3OH
+        CH3OH + H2 = CH4 + H2O
+        HCOOH + H2 = CH2O + H2O
+
+    pathway 4:
+        CO + H2O = HCOOH
+        CH2O + H2 = CH3OH
+        CO + 2 H2 = CH3OH
+        CH3OH + H2 = CH4 + H2O
         HCOOH + H2 = CH2O + H2O
 
 Additionally, GraphChem can generate a [GraphViz] reaction network visualization:

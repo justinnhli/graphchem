@@ -313,14 +313,14 @@ class ReactionNetwork:
             self.graph.add_node(
                 reaction_str,
                 type='reaction',
-                ready=False,
+                triggered=False,
             )
             for reactant in reaction.reactants:
                 reactant_str = str(reactant)
                 self.graph.add_node(
                     reactant_str,
                     type='molecule',
-                    synthesis_pathways=set(),
+                    pathways=set(),
                 )
                 self.graph.add_edge(reactant_str, reaction_str)
             for product in reaction.products:
@@ -328,54 +328,53 @@ class ReactionNetwork:
                 self.graph.add_node(
                     product_str,
                     type='molecule',
-                    synthesis_pathways=set(),
+                    pathways=set(),
                 )
                 self.graph.add_edge(reaction_str, product_str)
 
     def _reset_synthesis(self):
         for node in self.graph.nodes:
-            self.graph.nodes[node]['synthesis_pathways'] = set()
+            self.graph.nodes[node]['pathways'] = set()
 
     def _all_reactants_synthesized(self, reaction):
         return (
-            self.graph.nodes[reaction]['ready'] or 
+            self.graph.nodes[reaction]['triggered'] or 
             all(
-                len(self.graph.nodes[reactant]['synthesis_pathways']) > 0
+                len(self.graph.nodes[reactant]['pathways']) > 0
                 for reactant, _ in self.graph.in_edges(reaction)
             )
         )
 
-    def _find_new_reactions(self, reactant):
+    def _trigger_new_reactions(self, reactant):
         reactions = set()
         for _, reaction in self.graph.out_edges(reactant):
             if self._all_reactants_synthesized(reaction):
-                self.graph.nodes[reaction]['ready'] = True
+                self.graph.nodes[reaction]['triggered'] = True
                 reactions.add(reaction)
         return reactions
 
     def _synthesize_new_reactants(self, reaction):
         return set(
             product for _, product in self.graph.out_edges(reaction)
-            if not self.graph.nodes[product]['synthesis_pathways']
+            if not self.graph.nodes[product]['pathways']
         )
 
     def _propagate_synthesis_pathways(self, reaction):
         new_product_networks = self._chain_synthesis_pathways(reaction)
         for _, product in self.graph.out_edges(reaction):
-            self.graph.nodes[product]['synthesis_pathways'] |= new_product_networks
+            self.graph.nodes[product]['pathways'] |= new_product_networks
 
     def _chain_synthesis_pathways(self, reaction):
         reactant_networks = [
-            self.graph.nodes[reactant]['synthesis_pathways']
+            self.graph.nodes[reactant]['pathways']
             for reactant in self.graph.predecessors(reaction)
         ]
-        product_networks = set()
+        pathways = set()
         for networks in cross_product(*reactant_networks):
-            product_networks.add(frozenset(set.union({reaction}, *networks)))
-        # FIXME need to propagate synthesis networks to children
-        return product_networks
+            pathways.add(frozenset(set.union({reaction}, *networks)))
+        return pathways
 
-    def search(self, product, *reactants):
+    def synthesize(self, product, *reactants):
         """Search for sub-networks that could synthesize the product.
 
         Arguments:
@@ -388,19 +387,19 @@ class ReactionNetwork:
         self._reset_synthesis()
         for reactant in reactants:
             reactant_node = self.graph.nodes[reactant]
-            reactant_node['synthesis_pathways'] = set([frozenset()])
+            reactant_node['pathways'] = set([frozenset()])
         new_reactants = set(reactants)
         wave = 1
         while new_reactants:
             reactions = set()
             for reactant in new_reactants:
-                reactions = reactions.union(self._find_new_reactions(reactants))
+                reactions = reactions.union(self._trigger_new_reactions(reactants))
             new_reactants = set()
             for reaction in reactions:
                 new_reactants = new_reactants.union(self._synthesize_new_reactants(reaction))
                 self._propagate_synthesis_pathways(reaction)
             wave += 1
-        yield from self.graph.nodes[product]['synthesis_pathways']
+        yield from self.graph.nodes[product]['pathways']
 
     def to_dot(self, final_product='', *initial_reactants): # pylint: disable = keyword-arg-before-vararg
         """Create a Graphviz representation of the reaction network.
@@ -453,7 +452,7 @@ class ReactionNetwork:
         if synthesis:
             dot.append('    # SYNTHESIS PATHWAYS')
             dot.append('')
-            syn_nets = self.search(final_product, *initial_reactants)
+            syn_nets = self.synthesize(final_product, *initial_reactants)
             syn_nets = sorted(syn_nets, key=(lambda net: (len(net), sum(len(eq) for eq in net))))
             for syn_index, syn_net in enumerate(syn_nets, start=1):
                 dot.append(f'    # pathway {syn_index}:')
@@ -503,7 +502,7 @@ def main():
     print(network.to_dot(final_product, *initial_reactants))
     print()
 
-    syn_nets = network.search(final_product, *initial_reactants)
+    syn_nets = network.synthesize(final_product, *initial_reactants)
     syn_nets = sorted(syn_nets, key=(lambda net: (len(net), sum(len(eq) for eq in net))))
     print(f'{len(syn_nets)} synthesis pathways found:')
     print()

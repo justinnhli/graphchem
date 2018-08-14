@@ -541,14 +541,15 @@ class ReactionNetwork:
             syn_nets = sorted(syn_nets, key=(lambda net: (len(net), sum(len(eq) for eq in net))))
             for syn_index, syn_net in enumerate(syn_nets, start=1):
                 dot.append(f'    # pathway {syn_index}:')
+                color = colors[(syn_index - 1) % len(colors)]
                 for reaction_str in syn_net:
                     dot.append(f'    #   {reaction_str}')
                 for reaction_str in syn_net:
                     reaction = self.REACTION_PARSER.parse(reaction_str)
                     for reactant in reaction.reactants:
-                        dot.append(f'    "{reactant}" -> "{reaction}" [color="{colors[(syn_index - 1) % len(colors)]}"]')
+                        dot.append(f'    "{reactant}" -> "{reaction}" [color="{color}"]')
                     for product in reaction.products:
-                        dot.append(f'    "{reaction}" -> "{product}" [color="{colors[(syn_index - 1) % len(colors)]}"]')
+                        dot.append(f'    "{reaction}" -> "{product}" [color="{color}"]')
                     used_reactions.add(reaction_str)
                 dot.append('')
         # color code remainder of network

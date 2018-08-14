@@ -382,6 +382,7 @@ class ReactionNetwork:
             reaction_strs (List[str]): Reactions in the network.
         """
         self.graph = DiGraph()
+        self.reactions = {} # str -> Reaction
         self._build_graph(reaction_strs)
         self._reset_synthesis()
 
@@ -389,6 +390,7 @@ class ReactionNetwork:
         for reaction_str in reaction_strs:
             reaction = self.REACTION_PARSER.parse(reaction_str)
             reaction_str = str(reaction)
+            self.reactions[reaction_str] = reaction
             self.graph.add_node(
                 reaction_str,
                 type='reaction',

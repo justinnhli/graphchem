@@ -448,9 +448,16 @@ class ReactionNetwork:
         )
 
     def _propagate_synthesis_pathways(self, reaction):
-        new_product_networks = self._chain_synthesis_pathways(reaction)
-        for product in self.graph.successors(reaction):
-            self.graph.nodes[product]['pathways'] |= new_product_networks
+        queue = [reaction]
+        while queue:
+            reaction = queue.pop(0)
+            new_pathways = self._chain_synthesis_pathways(reaction)
+            for product in self.graph.successors(reaction):
+                product_node = self.graph.nodes[product]
+                if product_node['pathways'] >= new_pathways:
+                    continue
+                product_node['pathways'] |= new_pathways
+                queue.extend(self.graph.successors(product))
 
     def _chain_synthesis_pathways(self, reaction):
         """Determine the synthesis pathway of a reaction.

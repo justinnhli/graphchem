@@ -316,7 +316,7 @@ class ReactionNetwork:
                 self.graph.add_node(
                     reactant_str,
                     type='molecule',
-                    synthesis_networks=set(),
+                    synthesis_pathways=set(),
                 )
                 self.graph.add_edge(reactant_str, reaction_str)
             for product in reaction.products:
@@ -324,17 +324,17 @@ class ReactionNetwork:
                 self.graph.add_node(
                     product_str,
                     type='molecule',
-                    synthesis_networks=set(),
+                    synthesis_pathways=set(),
                 )
                 self.graph.add_edge(reaction_str, product_str)
 
     def _reset_synthesis(self):
         for node in self.graph.nodes:
-            self.graph.nodes[node]['synthesis_networks'] = set()
+            self.graph.nodes[node]['synthesis_pathways'] = set()
 
     def _all_reactants_synthesized(self, reaction):
         return all(
-            len(self.graph.nodes[reactant]['synthesis_networks']) > 0
+            len(self.graph.nodes[reactant]['synthesis_pathways']) > 0
             for reactant, _ in self.graph.in_edges(reaction)
         )
 
@@ -348,7 +348,7 @@ class ReactionNetwork:
 
     def _calculate_synthesis_networks(self, reaction):
         reactant_networks = [
-            self.graph.nodes[reactant]['synthesis_networks']
+            self.graph.nodes[reactant]['synthesis_pathways']
             for reactant in self.graph.predecessors(reaction)
         ]
         product_networks = set()
@@ -362,9 +362,9 @@ class ReactionNetwork:
             new_product_networks = self._calculate_synthesis_networks(reaction)
             for _, product in self.graph.out_edges(reaction):
                 product_node = self.graph.nodes[product]
-                if not product_node['synthesis_networks']:
+                if not product_node['synthesis_pathways']:
                     reactants.add(product)
-                product_node['synthesis_networks'] |= new_product_networks
+                product_node['synthesis_pathways'] |= new_product_networks
         return reactants
 
     def search(self, product, *reactants):
@@ -380,7 +380,7 @@ class ReactionNetwork:
         self._reset_synthesis()
         for reactant in reactants:
             reactant_node = self.graph.nodes[reactant]
-            reactant_node['synthesis_networks'] = set([frozenset()])
+            reactant_node['synthesis_pathways'] = set([frozenset()])
         new_reactants = set(reactants)
         wave = 1
         while new_reactants:
@@ -388,7 +388,7 @@ class ReactionNetwork:
             new_reactants = self._synthesize_new_reactants(reactions)
             # FIXME need to propagate synthesis networks to children
             wave += 1
-        yield from self.graph.nodes[product]['synthesis_networks']
+        yield from self.graph.nodes[product]['synthesis_pathways']
 
     def to_dot(self, final_product='', *initial_reactants): # pylint: disable = keyword-arg-before-vararg
         """Create a Graphviz representation of the reaction network.
@@ -439,12 +439,12 @@ class ReactionNetwork:
         # color code synthesis networks
         used_reactions = set()
         if synthesis:
-            dot.append('    # SYNTHESIS NETWORKS')
+            dot.append('    # SYNTHESIS PATHWAYS')
             dot.append('')
             syn_nets = self.search(final_product, *initial_reactants)
             syn_nets = sorted(syn_nets, key=(lambda net: (len(net), sum(len(eq) for eq in net))))
             for syn_index, syn_net in enumerate(syn_nets, start=1):
-                dot.append(f'    # network {syn_index} reactions:')
+                dot.append(f'    # pathway {syn_index}:')
                 for reaction_str in syn_net:
                     dot.append(f'    #   {reaction_str}')
                 for reaction_str in syn_net:
@@ -493,10 +493,10 @@ def main():
 
     syn_nets = network.search(final_product, *initial_reactants)
     syn_nets = sorted(syn_nets, key=(lambda net: (len(net), sum(len(eq) for eq in net))))
-    print(f'{len(syn_nets)} synthesis networks found:')
+    print(f'{len(syn_nets)} synthesis pathways found:')
     print()
     for index, syn_net in enumerate(syn_nets, start=1):
-        print(f'network {index}:')
+        print(f'pathway {index}:')
         for reaction in sorted(syn_net, key=len):
             print(f'    {reaction}')
         print()

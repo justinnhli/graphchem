@@ -479,6 +479,11 @@ class ReactionNetwork:
         )
 
     def _propagate_synthesis_pathways(self, reaction):
+        """Propagate synthesis pathways down the network.
+
+        Arguments:
+            reaction (str): The reaction to start the propagation form.
+        """
         queue = [reaction]
         while queue:
             reaction = queue.pop(0)

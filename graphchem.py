@@ -423,26 +423,14 @@ class ReactionNetwork:
             reaction = self.REACTION_PARSER.parse(reaction_str)
             reaction_str = str(reaction)
             self._reactions[reaction_str] = reaction
-            self.graph.add_node(
-                reaction_str,
-                type='reaction',
-                triggered=False,
-            )
+            self.graph.add_node(reaction_str, type='reaction', triggered=False)
             for reactant in reaction.reactants:
                 reactant_str = str(reactant)
-                self.graph.add_node(
-                    reactant_str,
-                    type='molecule',
-                    pathways=set(),
-                )
+                self.graph.add_node(reactant_str, type='molecule', pathways=set())
                 self.graph.add_edge(reactant_str, reaction_str)
             for product in reaction.products:
                 product_str = str(product)
-                self.graph.add_node(
-                    product_str,
-                    type='molecule',
-                    pathways=set(),
-                )
+                self.graph.add_node(product_str, type='molecule', pathways=set())
                 self.graph.add_edge(reaction_str, product_str)
 
     def _reset_synthesis(self):
@@ -474,7 +462,7 @@ class ReactionNetwork:
             reactant (str): A reactant.
 
         Returns:
-            Set[str]: The reactions that are newly triggered
+            Set[str]: The reactions that are newly triggered.
         """
         reactions = set()
         for reaction in self.graph.successors(reactant):

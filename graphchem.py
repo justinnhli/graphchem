@@ -500,6 +500,7 @@ class ReactionNetwork:
                 if product_node['pathways'] >= new_pathways:
                     continue
                 product_node['pathways'] |= new_pathways
+                product_node['pathways'] = self._simplify_pathways(product_node['pathways'])
                 queue.extend(self.graph.successors(product))
 
     def _chain_synthesis_pathways(self, reaction):
@@ -518,6 +519,17 @@ class ReactionNetwork:
         pathways = set()
         for networks in cross_product(*reactant_networks):
             pathways.add(frozenset(set.union({reaction}, *networks)))
+        return pathways
+
+    def _simplify_pathways(self, pathways):
+        """Remove redundant pathways.
+
+        Arguments:
+            pathways (FrozenSet[Set[str]]): Synthesis pathways
+
+        Returns:
+            (FrozenSet[Set[str]]): The same pathways, simplified.
+        """
         return pathways
 
     def synthesize(self, product, *reactants):

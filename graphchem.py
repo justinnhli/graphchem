@@ -395,15 +395,34 @@ class ReactionNetwork:
             reaction_strs (List[str]): Reactions in the network.
         """
         self.graph = DiGraph()
-        self.reactions = {} # str -> Reaction
+        self._reactions = {} # str -> Reaction
         self._build_graph(reaction_strs)
         self._reset_synthesis()
+
+    @property
+    def molecules(self):
+        yield from (
+            (node, self.graph.nodes[node])
+            for node in self.graph.nodes
+            if self.graph.nodes[node]['type'] == 'molecule'
+        )
+
+    @property
+    def reactions(self):
+        yield from (
+            (node, self.graph.nodes[node])
+            for node in self.graph.nodes
+            if self.graph.nodes[node]['type'] == 'reaction'
+        )
+
+    def __getitem__(self, key):
+        return self.graph.nodes[key]
 
     def _build_graph(self, reaction_strs):
         for reaction_str in reaction_strs:
             reaction = self.REACTION_PARSER.parse(reaction_str)
             reaction_str = str(reaction)
-            self.reactions[reaction_str] = reaction
+            self._reactions[reaction_str] = reaction
             self.graph.add_node(
                 reaction_str,
                 type='reaction',
@@ -558,10 +577,7 @@ class ReactionNetwork:
         dot.append('')
         # pre-calculate list of reactions
         reaction_strs = sorted(
-            [
-                node for node in self.graph.nodes
-                if self.graph.nodes[node]['type'] == 'reaction'
-            ],
+            [reaction for reaction, _ in self.reactions],
             key=reaction_key,
         )
         # draw special nodes (all reactions, synthesis reactants and products)
@@ -598,7 +614,7 @@ class ReactionNetwork:
                     dot.append(f'    #   {reaction_str}')
                 dot.append(f'    edge [color="{color}"]')
                 for reaction_str in sorted(pathway, key=reaction_key):
-                    reaction = self.reactions[reaction_str]
+                    reaction = self._reactions[reaction_str]
                     for reactant in sorted(reaction.reactants):
                         dot.append(f'    "{reactant}" -> "{reaction}"')
                     for product in sorted(reaction.products):

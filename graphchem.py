@@ -539,6 +539,13 @@ class ReactionNetwork:
     def _simplify_pathways(self, pathways):
         """Remove redundant pathways.
 
+        The problem is that with a sufficiently completed network, there will
+        be a combinatorial explosion in the number of synthesis pathways. For
+        example, imagine that there molecule A and B could both be synthesized
+        in two ways. If A and B could be used to synthesize C, there would be
+        four different pathways for its synthesis. Clearly, this would not
+        scale as the network includes more reactions.
+
         Arguments:
             pathways (FrozenSet[Set[str]]): Synthesis pathways
 

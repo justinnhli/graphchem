@@ -423,6 +423,14 @@ class ReactionNetwork:
         )
 
     def __getitem__(self, key):
+        """Returns the node for the given key.
+
+        Arguments:
+            key (str): Either a molecule or a reaction.
+
+        Returns:
+            dict: Data associated with that node.
+        """
         return self.graph.nodes[key]
 
     def _build_graph(self, reaction_strs):

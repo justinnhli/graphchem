@@ -4,6 +4,7 @@
 from collections import namedtuple, Counter
 from decimal import Decimal
 from itertools import product as cross_product
+from os.path import realpath, join as join_path, dirname
 from textwrap import dedent
 
 from networkx import DiGraph
@@ -81,7 +82,13 @@ class ReactionWalker(ASTWalker):
 
     def __init__(self):
         """Initialize a ReactionWalker."""
-        super().__init__(create_parser_from_file('reactions.ebnf'), 'Reaction')
+        super().__init__(
+            create_parser_from_file(join_path(
+                dirname(realpath(__file__)),
+                'reactions.ebnf',
+            )),
+            'Reaction',
+        )
 
     def _parse_Reaction(self, ast, results):
         return Reaction(results[0], results[1])

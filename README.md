@@ -1,6 +1,6 @@
 # GraphChem
 
-GraphChem finds all possible synthesis pathways for a product given takes a set of reactions and a set of initial reactants.
+GraphChem finds all possible synthesis pathways for a product given a set of reactions and a set of initial reactants.
 
 ## Running
 

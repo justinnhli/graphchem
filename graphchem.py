@@ -350,15 +350,15 @@ class ReactionNetwork:
     2. Based on these reactions, check which new reactants are available.
 
     One insight that helps with efficiency is noticing that, at each step, we
-    only care about which _new_ reactants are available.  Any reaction that
-    does not use those reactants either have already triggered, or could not be
+    only care about which _new_ reactants are available. Any reaction that does
+    not use those reactants either have already triggered, or could not be
     triggered at this step.
 
     Dynamic programming is used to collect all the reactions necessary to
     synthesize a product. Associated with each molecule is the set of pathways
     (each itself a set of reactions) that could synthesize it. This is most
     easily explained with a recurrence relation. First, initial reactants have
-    the set of an empty pathway.  This is to differentiate them from reactants
+    the set of an empty pathway. This is to differentiate them from reactants
     that have yet to be synthesized, which would have no pathways (the empty
     set).
 
@@ -371,8 +371,8 @@ class ReactionNetwork:
     each with the addition of the current reaction.
 
     For formally, we can define a molecule m and its synthesis pathways
-    paths(m).  Similarly, we might write that a reaction r has reactants
-    pred(r) and products succ(r). Then we initialize:
+    paths(m). Similarly, we might write that a reaction r has reactants pred(r)
+    and products succ(r). Then we initialize:
 
     paths(m) =
         {{}}    if m is an initial reactant
@@ -537,7 +537,7 @@ class ReactionNetwork:
         return pathways
 
     def _simplify_pathways(self, pathways):
-        """Remove redundant pathways.
+        """Remove redundant pathways. TODO
 
         The problem is that with a sufficiently completed network, there will
         be a combinatorial explosion in the number of synthesis pathways. For

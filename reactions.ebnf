@@ -1,30 +1,27 @@
-ReactionsList = ( NewLine )* ( Reaction ( NewLine )+ )+;
+reactions_list = ( newline )* ( reaction ( newline )+ )+;
 
-Reaction = MoleculeList OptSpace "=" OptSpace MoleculeList;
+reaction = molecule_list opt_space "=" opt_space molecule_list;
 
-MoleculeList = MoleculeCount ( OptSpace "+" OptSpace MoleculeCount )*;
+molecule_list = molecule_count ( opt_space "+" opt_space molecule_count )*;
 
-MoleculeCount = ( Number OptSpace )? Molecule;
+molecule_count = ( number opt_space )? molecule;
 
-Molecule = ( GroupCount )+;
+molecule = ( group_count )+;
 
-GroupCount = Part ( Int )?;
-Part = Group
-     | Element;
+group_count = part ( int )?;
+part = group
+     | element;
 
-Group = "(" ( GroupCount )+ ")";
+group = "(" ( group_count )+ ")";
 
-Number = Float
-       | Int;
-Float = ( digit )* "." ( digit )+;
-Int = NonZero ( digit )*;
+number = float
+       | int;
+float = ( DIGIT )* "." ( DIGIT )+;
+int = non_zero ( DIGIT )*;
 
-NonZero = digit
-        - "0";
+non_zero = !("0") DIGIT;
 
-
-
-Element = "Ac"
+element = "Ac"
         | "Ag"
         | "Al"
         | "Am"
@@ -143,7 +140,7 @@ Element = "Ac"
         | "Zn"
         | "Zr";
 
-OptSpace = ( " " )*;
-NewLine = Comment
-        | newline;
-Comment = "#" ( print )* newline;
+opt_space = ( " " )*;
+newline = comment
+        | NEWLINE;
+comment = "#" ( PRINT )* NEWLINE;

@@ -87,16 +87,16 @@ class ReactionWalker(ASTWalker):
                 dirname(realpath(__file__)),
                 'reactions.ebnf',
             )),
-            'Reaction',
+            'reaction',
         )
 
-    def _parse_Reaction(self, ast, results):
+    def _parse_reaction(self, ast, results):
         return Reaction(results[0], results[1])
 
-    def _parse_MoleculeList(self, ast, results):
+    def _parse_molecule_list(self, ast, results):
         return results
 
-    def _parse_MoleculeCount(self, ast, results):
+    def _parse_molecule_count(self, ast, results):
         if len(results) == 1:
             return MoleculeCount(Decimal(1), results[0])
         elif len(results) == 2:
@@ -105,10 +105,10 @@ class ReactionWalker(ASTWalker):
             assert False
             return None
 
-    def _parse_Molecule(self, ast, results):
+    def _parse_molecule(self, ast, results):
         return Molecule(*results)
 
-    def _parse_GroupCount(self, ast, results):
+    def _parse_group_count(self, ast, results):
         if len(results) == 1:
             return GroupCount(results[0], 1)
         elif len(results) == 2:
@@ -117,16 +117,16 @@ class ReactionWalker(ASTWalker):
             assert False
             return None
 
-    def _parse_Group(self, ast, results):
+    def _parse_group(self, ast, results):
         return results
 
-    def _parse_Element(self, ast, results):
+    def _parse_element(self, ast, results):
         return ast.match
 
-    def _parse_Number(self, ast, results):
+    def _parse_number(self, ast, results):
         return Decimal(ast.match)
 
-    def _parse_Int(self, ast, results):
+    def _parse_int(self, ast, results):
         return int(ast.match)
 
 

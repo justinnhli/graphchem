@@ -85,7 +85,7 @@ class ReactionWalker(ASTWalker):
         super().__init__(
             create_parser_from_file(join_path(
                 dirname(realpath(__file__)),
-                'reactions.ebnf',
+                'reactions.peg',
             )),
             'reaction',
         )

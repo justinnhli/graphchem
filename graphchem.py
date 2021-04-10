@@ -131,12 +131,13 @@ class ReactionWalker(ASTWalker):
 class Molecule:
     """A chemistry molecule."""
 
-    def __init__(self, *components, name=None, formula=None):
+    def __init__(self, *components, formula=None, name=None):
         """Initialize the Molecule.
 
-        Arguments:
+        Parameters:
             *components (GroupCount): The chemical formula components (element
                 and group counts).
+            formula (str): The formula for the molecule. Optional.
             name (str): The name of the molecule, if any. Optional.
         """
         self.name = name
@@ -221,7 +222,7 @@ class Reaction:
         Arguments:
             reactants (List[MoleculeCount]): The reactants and their amounts.
             products (List[MoleculeCount]): The products and their amounts.
-            energy (int): The Gibbs free energy of the reaction.
+            energy (int): The Gibbs free energy of the reaction. Optional.
         """
         self.reactant_counts = reactants
         self.product_counts = products

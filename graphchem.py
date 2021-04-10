@@ -89,7 +89,7 @@ class ReactionWalker(ASTWalker):
         )
 
     def _parse_reaction(self, ast, results):
-        return Reaction(results[0], results[1], formula=ast.match)
+        return Reaction(results[0], results[1])
 
     def _parse_molecule_list(self, ast, results):
         return results
@@ -215,7 +215,7 @@ class Molecule:
 class Reaction:
     """A chemical reaction."""
 
-    def __init__(self, reactants, products, formula=None, energy=None):
+    def __init__(self, reactants, products, energy=None):
         """Initialize the Reaction.
 
         Arguments:
@@ -226,7 +226,6 @@ class Reaction:
         self.reactant_counts = reactants
         self.product_counts = products
         self.energy = energy
-        self.formula = formula
         self._integerize()
         self._check_equality()
 
@@ -265,9 +264,6 @@ class Reaction:
             List[int]: The coefficients of each product in this reaction.
         """
         return [product.count for product in self.product_counts]
-
-    def __str__(self):
-        return self.formula
 
     def _integerize(self):
         """Convert reaction equation to integers.

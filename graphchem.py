@@ -91,7 +91,7 @@ class ReactionWalker(ASTWalker):
         )
 
     def _parse_reaction(self, ast, results):
-        return Reaction(results[0], results[1])
+        return Reaction(results[0], results[1], formula=ast.match)
 
     def _parse_molecule_list(self, ast, results):
         return results
@@ -106,7 +106,7 @@ class ReactionWalker(ASTWalker):
             return None
 
     def _parse_molecule(self, ast, results):
-        return Molecule(*results)
+        return Molecule(*results, formula=ast.match)
 
     def _parse_group_count(self, ast, results):
         if len(results) == 1:
@@ -133,7 +133,7 @@ class ReactionWalker(ASTWalker):
 class Molecule:
     """A chemistry molecule."""
 
-    def __init__(self, *components, name=None):
+    def __init__(self, *components, name=None, formula=None):
         """Initialize the Molecule.
 
         Arguments:
@@ -143,7 +143,7 @@ class Molecule:
         """
         self.name = name
         self.components = components
-        self._formula = None
+        self._formula = formula
         self._atoms = None
 
     @property
@@ -217,7 +217,7 @@ class Molecule:
 class Reaction:
     """A chemical reaction."""
 
-    def __init__(self, reactants, products, energy=None):
+    def __init__(self, reactants, products, formula=None, energy=None):
         """Initialize the Reaction.
 
         Arguments:
@@ -228,6 +228,7 @@ class Reaction:
         self.reactant_counts = reactants
         self.product_counts = products
         self.energy = energy
+        self.formula = formula
         self._integerize()
         self._check_equality()
 
@@ -266,6 +267,9 @@ class Reaction:
             List[int]: The coefficients of each product in this reaction.
         """
         return [product.count for product in self.product_counts]
+
+    def __str__(self):
+        return self.formula
 
     def _integerize(self):
         """Convert reaction equation to integers.

@@ -16,7 +16,7 @@ GroupCount = namedtuple('GroupCount', 'group count')
 def least_common_mulitple(*ints):
     """Find the least common multiple.
 
-    Arguments:
+    Parameters:
         ints (int): Integers
 
     Returns:
@@ -40,7 +40,7 @@ def least_common_mulitple(*ints):
 def molecule_key(string):
     """Key for comparing molecule strings.
 
-    Arguments:
+    Parameters:
         string (str): The molecular formula.
 
     Returns:
@@ -52,7 +52,7 @@ def molecule_key(string):
 def reaction_key(string):
     """Key for comparing reaction equations.
 
-    Arguments:
+    Parameters:
         string (str): The reaction equation.
 
     Returns:
@@ -64,7 +64,7 @@ def reaction_key(string):
 def pathway_key(pathway):
     """Key for comparing synthesis pathways.
 
-    Arguments:
+    Parameters:
         pathway (Sequence[str]): A list of reaction equations.
 
     Returns:
@@ -219,7 +219,7 @@ class Reaction:
     def __init__(self, reactants, products, energy=None):
         """Initialize the Reaction.
 
-        Arguments:
+        Parameters:
             reactants (List[MoleculeCount]): The reactants and their amounts.
             products (List[MoleculeCount]): The products and their amounts.
             energy (int): The Gibbs free energy of the reaction. Optional.

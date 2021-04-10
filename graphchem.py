@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """A script to determine reactions necessary to synthesize a molecule."""
 
-from collections import namedtuple, Counter
+from collections import namedtuple, Counter, defaultdict
 from decimal import Decimal
-from itertools import product as cross_product
+from heapq import heappush, heappop
 from os.path import realpath, join as join_path, dirname
-from textwrap import dedent
 
 from pegparse import ASTWalker, create_parser_from_file
 
@@ -336,6 +335,143 @@ class Reaction:
         ])
 
 
+def num_atom_difference(source, target):
+    """Calculate the number of atoms different between two molecules.
+
+    This function implements a naive heuristic between two molecules: the number
+    of atoms that need to be added/removed from the source molecule to be
+    transformed to the target molecule.
+
+    Parameters:
+        source (Molecule): The source molecule.
+        target (Molecule): The target molecule.
+
+    Returns:
+        int: The number of atoms needed for the transformation.
+    """
+    source_atoms = source.atoms
+    target_atoms = target.atoms
+    elements = set(source_atoms) | set(target_atoms)
+    result = 0
+    for element in elements:
+        result += abs(source_atoms.get(element, 0) - target_atoms.get(element, 0))
+    return result
+
+
+def molecular_difference(source, target):
+    """Calculate the "difference" between two molecules.
+
+    Parameters:
+        source (Molecule): The source molecule.
+        target (Molecule): The target molecule.
+
+    Returns:
+        float: The difference between the molecules, by some distance metric.
+    """
+    return num_atom_difference(source, target) # TODO
+
+
+CUR_TIME = 0 # FIXME
+def reaction_possible(reaction, timeline):
+    """Calculate the earliest time a reaction is favorable.
+
+    Parameters:
+        reaction (Reaction): The reaction to consider.
+        timeline (Any): The temperature and pressure timeline.
+
+    Returns:
+        int: The time at which the reaction is favorable, or -1 otherwise.
+    """
+    global CUR_TIME
+    CUR_TIME += 1
+    return CUR_TIME # TODO
+
+
+def search(reactions, initial_reactants, final_product):
+    """Greedy hill-climbing to synthesize the product.
+
+    Parameters:
+        reactions (Iterable[Reaction]): List of reactions to consider.
+        initial_reactants (List[Molecule]): List of initial reactants.
+        final_product (Molecule): The product to synthesize.
+
+    Raises:
+        Exception: If the final product could not be synthesized.
+    """
+
+    # data structures
+    inputs = defaultdict(set) # type: Dict[Reactant, Set[Reaction]]
+    reactants = defaultdict(set) # type: Dict[Reaction, Set[Reactant]]
+    outputs = defaultdict(set) # type: Dict[Product, Set[Reaction]]
+
+    # variables
+    queue = [] # type: List[Tuple[int, str, Reaction]]
+    produced = {} # type: Dict[Product, (reaction, time)]
+
+    def produce(product, time, producer=None):
+        produced[product] = (producer, time)
+        for reaction in inputs[product]:
+            reactants[reaction].remove(product)
+            if not reactants[reaction]:
+                heuristic = min(
+                    molecular_difference(product, final_product)
+                    for product in reaction.products
+                )
+                heappush(queue, (heuristic, str(reaction), reaction))
+
+    # organize the reactions into data structures
+    for reaction in reactions:
+        for reactant in reaction.reactants:
+            inputs[reactant].add(reaction)
+        reactants[reaction].update(reaction.reactants)
+        for product in reaction.products:
+            outputs[product].add(reaction)
+
+    # initialize the variables
+    for reactant in initial_reactants:
+        produce(reactant, 0)
+
+    # hill climb
+    while queue and final_product not in produced:
+        _, _, reaction = heappop(queue)
+        earliest_time = reaction_possible(reaction, None)
+        if earliest_time == -1:
+            continue
+        for product in reaction.products:
+            if product not in produced:
+                produce(product, earliest_time, producer=reaction)
+
+    # error if search failed
+    if not queue:
+        raise Exception(
+            f'unable to synthesize {final_product} from: '
+            + f'{", ".join(str(x) for x in initial_reactants)}'
+        )
+
+    # re-trace synthesis sequence
+    sequence = []
+    product_queue = [final_product]
+    while product_queue:
+        product = product_queue.pop()
+        (reaction, time) = produced[product]
+        sequence.append((time, reaction, product))
+        if reaction is not None:
+            product_queue.extend(reaction.reactants)
+
+    # print synthesis sequence
+    print()
+    print(
+        f'synthesizing {final_product} from: '
+        + f'{", ".join(str(x) for x in initial_reactants)}'
+    )
+    print()
+    for time, reaction, product in sorted(sequence):
+        if reaction is None:
+            print(f'{time}: {product} given')
+        else:
+            print(f'{time}: {product} produced by {reaction}')
+
+
 SMALL_REACTION_SET = [
     'CO2 + H2 = HCOOH',
     'CO + H2O = HCOOH',
@@ -362,6 +498,23 @@ LARGE_REACTION_SET = [
     'CO + 2 H2 = CH3OH',
     'CO + 3 H2 = CH4 + H2O',
 ]
+
+
+def main():
+    initial_reactants = ['H2', 'CO', 'H2O']
+    final_product = 'CH4'
+
+    parser = ReactionWalker()
+    reactions = [
+        parser.parse(reaction)
+        for reaction in SMALL_REACTION_SET
+    ]
+    initial_reactants = [
+        parser.parse(reactant, 'molecule')
+        for reactant in initial_reactants
+    ]
+    final_product = parser.parse(final_product, 'molecule')
+    search(reactions, initial_reactants, final_product)
 
 
 if __name__ == '__main__':

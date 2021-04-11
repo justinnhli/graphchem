@@ -349,13 +349,10 @@ def num_atom_difference(source, target):
     Returns:
         int: The number of atoms needed for the transformation.
     """
-    source_atoms = source.atoms
-    target_atoms = target.atoms
-    elements = set(source_atoms) | set(target_atoms)
-    result = 0
-    for element in elements:
-        result += abs(source_atoms.get(element, 0) - target_atoms.get(element, 0))
-    return result
+    return sum(
+        abs(source.atoms.get(element, 0) - target.atoms.get(element, 0))
+        for element in (set(source.atoms) | set(target.atoms))
+    )
 
 
 def molecular_difference(source, target):

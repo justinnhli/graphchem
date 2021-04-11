@@ -452,24 +452,29 @@ def search(reactions, initial_reactants, final_product):
             + f'{", ".join(str(x) for x in initial_reactants)}'
         )
 
-    # re-trace synthesis sequence
-    sequence = set()
-    product_queue = [final_product]
+    # re-trace synthesis steps
+    priorities = {
+        None: (0, -len(produced)),
+    }
+    steps = set()
+    product_queue = [(final_product, 0)]
     while product_queue:
-        product = product_queue.pop()
+        product, distance = product_queue.pop()
         (reaction, time) = produced[product]
-        sequence.add((time, reaction, product))
+        steps.add((reaction, product))
         if reaction is not None:
-            product_queue.extend(reaction.reactants)
+            priorities[reaction] = (time, -distance)
+            for reactant in reaction.reactants:
+                product_queue.append((reactant, distance + 1))
 
-    # print synthesis sequence
-    print()
+    # print synthesis steps
     print(
         f'synthesizing {final_product} from: '
         + f'{", ".join(str(x) for x in initial_reactants)}'
     )
     print()
-    for time, reaction, product in sorted(sequence):
+    for reaction, product in sorted(steps, key=(lambda step: priorities[step[0]])):
+        time, _ = priorities[reaction]
         if reaction is None:
             print(f'{time}: {product} given')
         else:

@@ -446,12 +446,12 @@ def search(reactions, initial_reactants, final_product):
         )
 
     # re-trace synthesis sequence
-    sequence = []
+    sequence = set()
     product_queue = [final_product]
     while product_queue:
         product = product_queue.pop()
         (reaction, time) = produced[product]
-        sequence.append((time, reaction, product))
+        sequence.add((time, reaction, product))
         if reaction is not None:
             product_queue.extend(reaction.reactants)
 

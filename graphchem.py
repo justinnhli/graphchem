@@ -368,20 +368,20 @@ def molecular_difference(source, target):
     return num_atom_difference(source, target) # TODO
 
 
-CUR_TIME = 0 # FIXME
-def reaction_possible(reaction, timeline):
+def reaction_possible(reaction, produced, timeline):
     """Calculate the earliest time a reaction is favorable.
 
     Parameters:
         reaction (Reaction): The reaction to consider.
+        produced (Mapping[Product, Tuple[Reaction, time]]):
+            When different chemicals have been produced
         timeline (Any): The temperature and pressure timeline.
 
     Returns:
         int: The time at which the reaction is favorable, or -1 otherwise.
     """
-    global CUR_TIME
-    CUR_TIME += 1
-    return CUR_TIME # TODO
+    reactants_ready = max(produced[reactant][1] for reactant in reaction.reactants)
+    return reactants_ready + 1 # TODO
 
 
 def search(reactions, initial_reactants, final_product):
@@ -431,7 +431,7 @@ def search(reactions, initial_reactants, final_product):
     # hill climb
     while queue and final_product not in produced:
         _, _, reaction = heappop(queue)
-        earliest_time = reaction_possible(reaction, None)
+        earliest_time = reaction_possible(reaction, produced, None)
         if earliest_time == -1:
             continue
         for product in reaction.products:

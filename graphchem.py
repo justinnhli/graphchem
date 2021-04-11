@@ -470,6 +470,20 @@ def search(reactions, initial_reactants, final_product):
             print(f'{time}: {product} produced by {reaction}')
 
 
+def visualize_reactions(reactions):
+    lines = []
+    lines.append('digraph {')
+    chemicals = set()
+    for reaction in reactions:
+        lines.append(f'    "{reaction}" [shape="box"]')
+        for reactant in reaction.reactants:
+            lines.append(f'    "{reactant}" -> "{reaction}"')
+        for product in reaction.products:
+            lines.append(f'    "{reaction}" -> "{product}"')
+    lines.append('}')
+    print('\n'.join(lines))
+
+
 SMALL_REACTION_SET = [
     'CO2 + H2 = HCOOH',
     'CO + H2O = HCOOH',
@@ -500,7 +514,7 @@ LARGE_REACTION_SET = [
 
 def main():
     arg_parser = ArgumentParser()
-    arg_parser.add_argument(dest='action', nargs='?', choices=['demo', 'search'], default='search', help='The action to perform')
+    arg_parser.add_argument(dest='action', nargs='?', choices=['demo', 'search', 'visualize'], default='search', help='The action to perform')
     arg_parser.add_argument('-i', '--input', action='append', help='An initial reactant')
     arg_parser.add_argument('-o', '--output', action='store', help='The final product')
     arg_parser.add_argument('--reactions', action='store', default='LARGE_REACTION_SET', help='The reactions to allow')
@@ -538,6 +552,8 @@ def main():
 
     if args.action == 'search':
         search(reactions, initial_reactants, final_product)
+    elif args.action == 'visualize':
+        visualize_reactions(reactions)
     else:
         arg_parser.error(f'undefined action: {args.action}')
 

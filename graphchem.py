@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """A script to determine reactions necessary to synthesize a molecule."""
 
+from argparse import ArgumentParser
 from collections import namedtuple, Counter, defaultdict
 from decimal import Decimal
 from heapq import heappush, heappop
@@ -498,20 +499,47 @@ LARGE_REACTION_SET = [
 
 
 def main():
-    initial_reactants = ['H2', 'CO', 'H2O']
-    final_product = 'CH4'
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument(dest='action', nargs='?', choices=['demo', 'search'], default='search', help='The action to perform')
+    arg_parser.add_argument('-i', '--input', action='append', help='An initial reactant')
+    arg_parser.add_argument('-o', '--output', action='store', help='The final product')
+    arg_parser.add_argument('--reactions', action='store', default='LARGE_REACTION_SET', help='The reactions to allow')
+    args = arg_parser.parse_args()
+    if args.action == 'demo':
+        args.action = 'search'
+        args.input = ['H2', 'CO']
+        args.output = 'HCOOH'
+        args.reactions = 'LARGE_REACTION_SET'
+
+    if not args.input:
+        arg_parser.error('no initial reactant given')
+    if not args.output:
+        arg_parser.error('no final product given')
+
+    initial_reactants = args.input
+    final_product = args.output
+    if args.reactions == 'LARGE_REACTION_SET':
+        reaction_set = LARGE_REACTION_SET
+    elif args.reactions == 'SMALL_REACTION_SET':
+        reaction_set = SMALL_REACTION_SET
+    else:
+        arg_parser.error(f'undefined reactions set: {args.reactions}')
 
     parser = ReactionWalker()
     reactions = [
         parser.parse(reaction)
-        for reaction in SMALL_REACTION_SET
+        for reaction in reaction_set
     ]
     initial_reactants = [
         parser.parse(reactant, 'molecule')
         for reactant in initial_reactants
     ]
     final_product = parser.parse(final_product, 'molecule')
-    search(reactions, initial_reactants, final_product)
+
+    if args.action == 'search':
+        search(reactions, initial_reactants, final_product)
+    else:
+        arg_parser.error(f'undefined action: {args.action}')
 
 
 if __name__ == '__main__':

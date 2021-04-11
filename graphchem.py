@@ -411,11 +411,17 @@ def search(reactions, initial_reactants, final_product):
         for reaction in inputs[product]:
             reactants[reaction].remove(product)
             if not reactants[reaction]:
-                heuristic = min(
-                    molecular_difference(product, final_product)
-                    for product in reaction.products
+                # priority is made of two numbers, checked in order:
+                # 1. the difference from the goal molecule, a heuristics of sort
+                # 2. the earliest time a reaction possible
+                priority = (
+                    min(
+                        molecular_difference(product, final_product)
+                        for product in reaction.products
+                    ),
+                    max(produced[reactant][1] for reactant in reaction.reactants),
                 )
-                heappush(queue, (heuristic, str(reaction), reaction))
+                heappush(queue, (priority, str(reaction), reaction))
 
     # organize the reactions into data structures
     for reaction in reactions:

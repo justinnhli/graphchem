@@ -37,42 +37,6 @@ def least_common_mulitple(*ints):
     return result
 
 
-def molecule_key(string):
-    """Key for comparing molecule strings.
-
-    Parameters:
-        string (str): The molecular formula.
-
-    Returns:
-        Tuple[int, str]: The key.
-    """
-    return len(string), string
-
-
-def reaction_key(string):
-    """Key for comparing reaction equations.
-
-    Parameters:
-        string (str): The reaction equation.
-
-    Returns:
-        Tuple[int, str]: The key.
-    """
-    return len(string), string
-
-
-def pathway_key(pathway):
-    """Key for comparing synthesis pathways.
-
-    Parameters:
-        pathway (Sequence[str]): A list of reaction equations.
-
-    Returns:
-        Tuple[int, int]: The key.
-    """
-    return len(pathway), sum(len(reaction) for reaction in pathway)
-
-
 class ReactionWalker(ASTWalker):
     """A parser for chemical reactions."""
 

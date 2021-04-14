@@ -403,25 +403,27 @@ def search(reactions, initial_reactants, final_product):
     outputs = defaultdict(set) # type: Dict[Product, Set[Reaction]]
 
     # variables
-    queue = [] # type: List[Tuple[int, str, Reaction]]
-    produced = {} # type: Dict[Product, (reaction, time)]
+    queue = [] # type: List[Tuple[Tuple[float, int, str], Reaction]]
+    produced = {} # type: Dict[Product, Tuple[Reaction, int]]
 
     def produce(product, time, producer=None):
         produced[product] = (producer, time)
         for reaction in inputs[product]:
             reactants[reaction].remove(product)
             if not reactants[reaction]:
-                # priority is made of two numbers, checked in order:
-                # 1. the difference from the goal molecule, a heuristics of sort
-                # 2. the earliest time a reaction possible
+                # priority is made of three things, compared in order:
+                # 1. the difference from the goal molecule, a heuristics of sorts
+                # 2. the earliest time a reaction is possible
+                # 3. the string representation of the reaction, as a tie-breaker
                 priority = (
                     min(
                         molecular_difference(product, final_product)
                         for product in reaction.products
                     ),
                     max(produced[reactant][1] for reactant in reaction.reactants),
+                    str(reaction),
                 )
-                heappush(queue, (priority, str(reaction), reaction))
+                heappush(queue, (priority, reaction))
 
     # organize the reactions into data structures
     for reaction in reactions:
@@ -437,7 +439,7 @@ def search(reactions, initial_reactants, final_product):
 
     # hill climb
     while queue and final_product not in produced:
-        _, _, reaction = heappop(queue)
+        _, reaction = heappop(queue)
         earliest_time = reaction_possible(reaction, produced, None)
         if earliest_time == -1:
             continue

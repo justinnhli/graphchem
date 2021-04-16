@@ -168,32 +168,14 @@ class Reaction:
         """
         return [product.molecule for product in self.product_counts]
 
-    @property
-    def reactant_coefficients(self):
-        """Get the coefficients of each reactant.
-
-        Returns:
-            List[int]: The coefficients of each reactant in this reaction.
-        """
-        return [reactant.count for reactant in self.reactant_counts]
-
-    @property
-    def product_coefficients(self):
-        """Get the coefficients of each product.
-
-        Returns:
-            List[int]: The coefficients of each product in this reaction.
-        """
-        return [product.count for product in self.product_counts]
-
     def _integerize(self):
         """Convert reaction equation to integers.
 
         This function does not reduce the coefficients to the smallest values.
         """
         multiplier = least_common_mulitple(
-            *(coeff.as_integer_ratio()[1] for coeff in self.reactant_coefficients),
-            *(coeff.as_integer_ratio()[1] for coeff in self.product_coefficients),
+            *(group.count.as_integer_ratio()[1] for group in self.reactant_counts),
+            *(group.count.as_integer_ratio()[1] for group in self.product_counts),
         )
         self.reactant_counts = [
             MoleculeCount(int(multiplier * count), molecule)

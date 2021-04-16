@@ -156,13 +156,12 @@ class Molecule:
     def _build_atoms(self, component):
         if isinstance(component.group, str):
             return Counter({component.group: component.count})
-        else:
-            result = Counter()
-            for subcomponent in component.group:
-                subresult = self._build_atoms(subcomponent)
-                for _ in range(component.count):
-                    result.update(subresult)
-            return result
+        result = Counter() # type: Dict[GroupCount, int]
+        for subcomponent in component.group:
+            subresult = self._build_atoms(subcomponent)
+            for _ in range(component.count):
+                result.update(subresult)
+        return result
 
     def __eq__(self, other):
         return str(self) == str(other)
@@ -454,7 +453,6 @@ def print_search_results(initial_reactants, final_product, produced):
 def visualize_reactions(reactions):
     lines = []
     lines.append('digraph {')
-    chemicals = set()
     for reaction in reactions:
         lines.append(f'    "{reaction}" [shape="box"]')
         for reactant in reaction.reactants:
@@ -495,7 +493,11 @@ LARGE_REACTION_SET = [
 
 def main():
     arg_parser = ArgumentParser()
-    arg_parser.add_argument(dest='action', nargs='?', choices=['demo', 'search', 'visualize'], default='search', help='The action to perform')
+    arg_parser.add_argument(
+        dest='action', nargs='?',
+        choices=['demo', 'search', 'visualize'], default='search',
+        help='The action to perform',
+    )
     arg_parser.add_argument('-i', '--input', action='append', help='An initial reactant')
     arg_parser.add_argument('-o', '--output', action='store', help='The final product')
     arg_parser.add_argument('--reactions', action='store', default='LARGE_REACTION_SET', help='The reactions to allow')

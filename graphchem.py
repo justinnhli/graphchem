@@ -158,7 +158,7 @@ Product = Molecule
 class Reaction:
     """A chemical reaction."""
 
-    def __init__(self, reactants, products, energy=None):
+    def __init__(self, reactants, products, energy=0):
         # type: (Reaction, Sequence[MoleculeCount], Sequence[MoleculeCount], int) -> None
         """Initialize the Reaction.
 

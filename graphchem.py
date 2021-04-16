@@ -10,7 +10,6 @@ from os.path import realpath, join as join_path, dirname
 from pegparse import ASTWalker, create_parser_from_file
 
 MoleculeCount = namedtuple('MoleculeCount', 'count molecule')
-GroupCount = namedtuple('GroupCount', 'group count')
 
 
 def least_common_mulitple(*ints):
@@ -72,9 +71,12 @@ class ReactionWalker(ASTWalker):
 
     def _parse_group_count(self, ast, results):
         if len(results) == 1:
-            return GroupCount(results[0], 1)
+            return results[0]
         elif len(results) == 2:
-            return GroupCount(*results)
+            result = results[0]
+            for key, count in result.items():
+                result[key] = count * results[1]
+            return result
         else:
             assert False
             return None
@@ -83,7 +85,7 @@ class ReactionWalker(ASTWalker):
         return results
 
     def _parse_element(self, ast, results):
-        return ast.match
+        return Counter({ast.match})
 
     def _parse_number(self, ast, results):
         return Decimal(ast.match)
@@ -95,73 +97,28 @@ class ReactionWalker(ASTWalker):
 class Molecule:
     """A chemistry molecule."""
 
-    def __init__(self, *components, formula=None, name=None):
+    def __init__(self, *components, formula="", name=""):
         """Initialize the Molecule.
 
         Parameters:
-            *components (GroupCount): The chemical formula components (element
+            *components (Mapping[str, int]): The chemical formula components (element
                 and group counts).
             formula (str): The formula for the molecule. Optional.
             name (str): The name of the molecule, if any. Optional.
         """
         self.name = name
-        self.components = components
-        self._formula = formula
-        self._atoms = None
-
-    @property
-    def formula(self):
-        """Get the chemical formula of the molecule.
-
-        Returns:
-            str: The chemical formula of the molecule.
-        """
-        if self._formula is None:
-            self._formula = ''.join(
-                self._build_formula(component)
-                for component in self.components
+        if formula:
+            self.formula = formula
+        else:
+            self.formula = ''.join(
+                f'{element}{count}' if count > 1 else element
+                for component in components
+                for element, count in component.items()
             )
-        return self._formula
-
-    def _build_formula(self, component):
-        if isinstance(component.group, str):
-            result = component.group
-        else:
-            result = ''.join([
-                '(',
-                ''.join(
-                    self._build_formula(subcomponent)
-                    for subcomponent in component.group
-                ),
-                ')',
-            ])
-        if component.count == 1:
-            return result
-        else:
-            return result + str(component.count)
-
-    @property
-    def atoms(self):
-        """Get a count of the atoms in the molecule.
-
-        Returns:
-            Counter[str]: A count of the atoms in the molecule.
-        """
-        if self._atoms is None:
-            self._atoms = Counter()
-            for component in self.components:
-                self._atoms.update(self._build_atoms(component))
-        return self._atoms
-
-    def _build_atoms(self, component):
-        if isinstance(component.group, str):
-            return Counter({component.group: component.count})
-        result = Counter() # type: Dict[GroupCount, int]
-        for subcomponent in component.group:
-            subresult = self._build_atoms(subcomponent)
-            for _ in range(component.count):
-                result.update(subresult)
-        return result
+        self.atoms = Counter() # type: Dict[str, int]
+        for component in components:
+            for element, count in component.items():
+                self.atoms[element] += count
 
     def __eq__(self, other):
         return str(self) == str(other)

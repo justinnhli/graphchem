@@ -418,6 +418,10 @@ def search(reactions, initial_reactants, final_product):
             + f'{", ".join(str(x) for x in initial_reactants)}'
         )
 
+    return produced
+
+
+def print_search_results(initial_reactants, final_product, produced):
     # re-trace synthesis steps
     priorities = {
         None: (0, -len(produced)),
@@ -528,7 +532,8 @@ def main():
     final_product = parser.parse(final_product, 'molecule')
 
     if args.action == 'search':
-        search(reactions, initial_reactants, final_product)
+        produced = search(reactions, initial_reactants, final_product)
+        print_search_results(initial_reactants, final_product, produced)
     elif args.action == 'visualize':
         visualize_reactions(reactions)
     else:

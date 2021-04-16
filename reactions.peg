@@ -17,9 +17,7 @@ group = "(" ( group_count )+ ")";
 number = float
        | int;
 float = ( DIGIT )* "." ( DIGIT )+;
-int = non_zero ( DIGIT )*;
-
-non_zero = !("0") DIGIT;
+int =  !("0") ( DIGIT )+;
 
 element = "Ac"
         | "Ag"

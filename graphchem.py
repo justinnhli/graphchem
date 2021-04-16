@@ -7,12 +7,15 @@ from decimal import Decimal
 from heapq import heappush, heappop
 from os.path import realpath, join as join_path, dirname
 
+from typing import Any, Optional, Iterable, Sequence, Mapping, Tuple, List, Set, Dict
+
 from pegparse import ASTWalker, create_parser_from_file
 
 MoleculeCount = namedtuple('MoleculeCount', 'count molecule')
 
 
 def least_common_mulitple(*ints):
+    # type: (int) -> int
     """Find the least common multiple.
 
     Parameters:
@@ -42,6 +45,7 @@ class ReactionWalker(ASTWalker):
     # pylint: disable = invalid-name, unused-argument, no-self-use
 
     def __init__(self):
+        # type: (ReactionWalker) -> None
         """Initialize a ReactionWalker."""
         super().__init__(
             create_parser_from_file(join_path(
@@ -52,12 +56,15 @@ class ReactionWalker(ASTWalker):
         )
 
     def _parse_reaction(self, ast, results):
+        # type: (ReactionWalker, ASTNode, List[Any]) -> Reaction
         return Reaction(results[0], results[1])
 
     def _parse_molecule_list(self, ast, results):
+        # type: (ReactionWalker, ASTNode, List[Any]) -> List[Any]
         return results
 
     def _parse_molecule_count(self, ast, results):
+        # type: (ReactionWalker, ASTNode, List[Any]) -> Optional[MoleculeCount]
         if len(results) == 1:
             return MoleculeCount(Decimal(1), results[0])
         elif len(results) == 2:
@@ -67,9 +74,11 @@ class ReactionWalker(ASTWalker):
             return None
 
     def _parse_molecule(self, ast, results):
+        # type: (ReactionWalker, ASTNode, List[Any]) -> Molecule
         return Molecule(*results, formula=ast.match)
 
     def _parse_group_count(self, ast, results):
+        # type: (ReactionWalker, ASTNode, List[Any]) -> Dict[str, int]
         if len(results) == 1:
             return results[0]
         elif len(results) == 2:
@@ -82,15 +91,19 @@ class ReactionWalker(ASTWalker):
             return None
 
     def _parse_group(self, ast, results):
+        # type: (ReactionWalker, ASTNode, List[Any]) -> List[Any]
         return results
 
     def _parse_element(self, ast, results):
+        # type: (ReactionWalker, ASTNode, List[Any]) -> Dict[str, int]
         return Counter({ast.match})
 
     def _parse_number(self, ast, results):
+        # type: (ReactionWalker, ASTNode, List[Any]) -> Decimal
         return Decimal(ast.match)
 
     def _parse_int(self, ast, results):
+        # type: (ReactionWalker, ASTNode, List[Any]) -> int
         return int(ast.match)
 
 
@@ -98,6 +111,7 @@ class Molecule:
     """A chemistry molecule."""
 
     def __init__(self, *components, formula="", name=""):
+        # type: (Mapping[str, int], str, str) -> None
         """Initialize the Molecule.
 
         Parameters:
@@ -121,22 +135,31 @@ class Molecule:
                 self.atoms[element] += count
 
     def __eq__(self, other):
+        # type: (Molecule, Any) -> bool
         return str(self) == str(other)
 
     def __lt__(self, other):
+        # type: (Molecule, Any) -> bool
         return (len(str(self)), str(self)) < (len(str(other)), str(other))
 
     def __hash__(self):
+        # type: (Molecule) -> int
         return hash(str(self))
 
     def __str__(self):
+        # type: (Molecule) -> str
         return self.formula
+
+
+Reactant = Molecule
+Product = Molecule
 
 
 class Reaction:
     """A chemical reaction."""
 
     def __init__(self, reactants, products, energy=None):
+        # type: (Reaction, Sequence[MoleculeCount], Sequence[MoleculeCount], int) -> None
         """Initialize the Reaction.
 
         Parameters:
@@ -152,6 +175,7 @@ class Reaction:
 
     @property
     def reactants(self):
+        # type: (Reaction) -> List[Molecule]
         """Get the reactants.
 
         Returns:
@@ -161,6 +185,7 @@ class Reaction:
 
     @property
     def products(self):
+        # type: (Reaction) -> List[Molecule]
         """Get the products.
 
         Returns:
@@ -169,6 +194,7 @@ class Reaction:
         return [product.molecule for product in self.product_counts]
 
     def _integerize(self):
+        # type: (Reaction) -> None
         """Convert reaction equation to integers.
 
         This function does not reduce the coefficients to the smallest values.
@@ -187,12 +213,13 @@ class Reaction:
         ]
 
     def _check_equality(self):
+        # type: (Reaction) -> None
         """Check that atoms are conserved in this reaction."""
-        reactants_counter = Counter()
+        reactants_counter = Counter() # type: Dict[Molecule, int]
         for count, molecule in self.reactant_counts:
             for _ in range(count):
                 reactants_counter.update(molecule.atoms)
-        products_counter = Counter()
+        products_counter = Counter() # type: Dict[Molecule, int]
         for count, molecule in self.product_counts:
             for _ in range(count):
                 products_counter.update(molecule.atoms)
@@ -213,12 +240,15 @@ class Reaction:
             ])
 
     def __eq__(self, other):
+        # type: (Reaction, Any) -> bool
         return str(self) == str(other)
 
     def __hash__(self):
+        # type: (Reaction) -> int
         return hash(str(self))
 
     def __str__(self):
+        # type: (Reaction) -> str
         return ' '.join([
             ' + '.join(
                 (
@@ -238,7 +268,11 @@ class Reaction:
         ])
 
 
+PressureTemp = namedtuple('PressureTemp', 'pressure, temperature')
+
+
 def num_atom_difference(source, target):
+    # type: (Molecule, Molecule) -> int
     """Calculate the number of atoms different between two molecules.
 
     This function implements a naive heuristic between two molecules: the number
@@ -259,6 +293,7 @@ def num_atom_difference(source, target):
 
 
 def molecular_difference(source, target):
+    # type: (Molecule, Molecule) -> float
     """Calculate the "difference" between two molecules.
 
     Parameters:
@@ -272,6 +307,7 @@ def molecular_difference(source, target):
 
 
 def reaction_possible(reaction, produced, timeline):
+    # type: (Reaction, Mapping[Product, Tuple[Reaction, int]], Sequence[PressureTemp]) -> int
     """Calculate the earliest time a reaction is favorable.
 
     Parameters:
@@ -288,12 +324,17 @@ def reaction_possible(reaction, produced, timeline):
 
 
 def search(reactions, initial_reactants, final_product):
+    # type: (Iterable[Reaction], Iterable[Molecule], Molecule) -> Dict[Product, Tuple[Reaction, int]]
     """Greedy hill-climbing to synthesize the product.
 
     Parameters:
         reactions (Iterable[Reaction]): List of reactions to consider.
-        initial_reactants (List[Molecule]): List of initial reactants.
+        initial_reactants (Iterable[Molecule]): List of initial reactants.
         final_product (Molecule): The product to synthesize.
+
+    Returns:
+        Dict[Product, (Reaction, time)]: The produced molecules and the reaction
+            and time they were produced.
 
     Raises:
         Exception: If the final product could not be synthesized.
@@ -309,6 +350,7 @@ def search(reactions, initial_reactants, final_product):
     produced = {} # type: Dict[Product, Tuple[Reaction, int]]
 
     def produce(product, time, producer=None):
+        # type: (Product, int, Optional[Reaction]) -> None
         produced[product] = (producer, time)
         for reaction in inputs[product]:
             reactants[reaction].remove(product)
@@ -360,10 +402,11 @@ def search(reactions, initial_reactants, final_product):
 
 
 def print_search_results(initial_reactants, final_product, produced):
+    # type: (Iterable[Reaction], Molecule, Mapping[Product, Tuple[Reaction, int]]) -> None
     # re-trace synthesis steps
     priorities = {
         None: (0, -len(produced)),
-    }
+    } # type: Dict[Optional[Reaction], Tuple[int, float]]
     steps = set()
     product_queue = [(final_product, 0)]
     while product_queue:
@@ -390,6 +433,7 @@ def print_search_results(initial_reactants, final_product, produced):
 
 
 def visualize_reactions(reactions):
+    # type: (List[Reaction]) -> None
     lines = []
     lines.append('digraph {')
     for reaction in reactions:
@@ -431,6 +475,7 @@ LARGE_REACTION_SET = [
 
 
 def main():
+    # type: () -> None
     arg_parser = ArgumentParser()
     arg_parser.add_argument(
         dest='action', nargs='?',

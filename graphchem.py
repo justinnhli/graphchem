@@ -395,6 +395,20 @@ def search(reactions, initial_reactants, final_product, timeline):
     synthesized. For a similar reason, this reaction could not lead to an
     earlier synthesis pathway and can be ignored.
 
+    Similarly, when a molecule is synthesized, not all consuming reactions need
+    to be added to the priority queue:
+
+    1. If the reaction has other reactants that have not yet been synthesized,
+    the reaction obviously cannot occur at this point.
+
+    2. If the reaction has already occurred at an earlier time compared to when
+    the molecule was produced, there is no need to add the reaction to the
+    queue. This will be caught by the second case above regardless, but it
+    doesn't hurt to reduce the queue size.
+
+    3. If new production time does not allow the reaction could occur any
+    earlier, and so do not have to be added to the queue.
+
     Parameters:
         reactions (Reactions): List of reactions to consider.
         initial_reactants (Molecules): List of initial reactants.
@@ -437,20 +451,29 @@ def search(reactions, initial_reactants, final_product, timeline):
             distance (int): The minimum distance to an initial reactant.
             producer (Optional[Reaction]): The reaction that produced the molecule.
         """
+        prev_time = -1
+        if product in produced:
+            prev_time = produced[product].time
         produced[product] = ProductionMetadata(producer, time, distance)
         for reaction in consumed_by[product]:
             missing_reactants[reaction].discard(product)
-            if not missing_reactants[reaction]:
-                priority = Priority(
-                    min(
-                        molecular_difference(product, final_product)
-                        for product in reaction.products
-                    ),
-                    max(produced[reactant].time for reactant in reaction.reactants),
-                    distance,
-                    str(reaction),
-                )
-                heappush(queue, (priority, reaction))
+            if missing_reactants[reaction]:
+                continue
+            if reacted.get(reaction, time + 1) <= time:
+                continue
+            reactants_ready = max(produced[reactant].time for reactant in reaction.reactants)
+            if 0 <= prev_time <= reactants_ready:
+                continue
+            priority = Priority(
+                min(
+                    molecular_difference(product, final_product)
+                    for product in reaction.products
+                ),
+                reactants_ready,
+                distance,
+                str(reaction),
+            )
+            heappush(queue, (priority, reaction))
 
     # initialize the variables
     for reactant in initial_reactants:
@@ -462,7 +485,7 @@ def search(reactions, initial_reactants, final_product, timeline):
         earliest_time = reaction_first_possible(reaction, produced, timeline)
         if earliest_time == -1:
             continue
-        if reaction in reacted and reacted[reaction] <= earliest_time:
+        if reacted.get(reaction, earliest_time + 1) <= earliest_time:
             continue
         if final_product in produced and produced[final_product].time < earliest_time:
             continue

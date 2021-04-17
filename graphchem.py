@@ -262,11 +262,16 @@ class Reaction:
 
 
 TempPres = namedtuple('TempPres', 'temperature, pressure') # in Celsius and kilopascals
+# priority is made of several things, compared in order:
+# 1. the difference from the goal molecule, a heuristics of sorts
+# 2. the earliest time a reaction is possible
+# 3. the minimum distance to an initial reactant
+# 4. the string representation of the reaction, as a tie-breaker
+Priority = namedtuple('Priority', 'heuristic, time, distance, string')
 
 
 Reactions = Iterable[Reaction] # pylint: disable = unused-variable
 Timeline = Sequence[TempPres] # pylint: disable = unused-variable
-Priority = Tuple[float, int, str] # pylint: disable = unused-variable
 ProductionMetadata = Tuple[Reaction, int, int] # pylint: disable = unused-variable
 SearchResult = Mapping[Product, ProductionMetadata] # pylint: disable = unused-variable
 
@@ -368,29 +373,27 @@ def search(reactions, initial_reactants, final_product, timeline):
     queue = [] # type: List[Tuple[Priority, Reaction]]
     produced = {} # type: Dict[Product, ProductionMetadata]
 
-    def produce(product, time, producer=None):
-        # type: (Product, int, Optional[Reaction]) -> None
+    def produce(product, time, distance, producer=None):
+        # type: (Product, int, int, Optional[Reaction]) -> None
         """Add a molecule to the production record.
 
         Parameters:
             product (Product): The molecule that was produced.
             time (int): The time at which the molecule was produced.
+            distance (int): The minimum distance to an initial reactant.
             producer (Optional[Reaction]): The reaction that produced the molecule.
         """
-        produced[product] = (producer, time)
+        produced[product] = (producer, time, distance)
         for reaction in inputs[product]:
             reactants[reaction].remove(product)
             if not reactants[reaction]:
-                # priority is made of three things, compared in order:
-                # 1. the difference from the goal molecule, a heuristics of sorts
-                # 2. the earliest time a reaction is possible
-                # 3. the string representation of the reaction, as a tie-breaker
-                priority = (
+                priority = Priority(
                     min(
                         molecular_difference(product, final_product)
                         for product in reaction.products
                     ),
                     max(produced[reactant][1] for reactant in reaction.reactants),
+                    distance,
                     str(reaction),
                 )
                 heappush(queue, (priority, reaction))
@@ -405,17 +408,17 @@ def search(reactions, initial_reactants, final_product, timeline):
 
     # initialize the variables
     for reactant in initial_reactants:
-        produce(reactant, 0)
+        produce(reactant, 0, 0)
 
     # hill climb
     while queue and final_product not in produced:
-        _, reaction = heappop(queue)
+        priority, reaction = heappop(queue)
         earliest_time = reaction_first_possible(reaction, produced, timeline)
         if earliest_time == -1:
             continue
         for product in reaction.products:
             if product not in produced:
-                produce(product, earliest_time, producer=reaction)
+                produce(product, earliest_time, priority[2] + 1, producer=reaction)
 
     # error if search failed
     if not queue:
@@ -434,15 +437,15 @@ def print_search_results(initial_reactants, final_product, produced):
         None: (0, -len(produced)),
     } # type: Dict[Optional[Reaction], Tuple[int, float]]
     steps = set()
-    product_queue = [(final_product, 0)]
+    product_queue = [final_product]
     while product_queue:
-        product, distance = product_queue.pop()
-        (reaction, time) = produced[product]
+        product = product_queue.pop()
+        (reaction, time, distance) = produced[product]
         steps.add((reaction, product))
         if reaction is not None:
-            priorities[reaction] = (time, -distance)
+            priorities[reaction] = (time, distance)
             for reactant in reaction.reactants:
-                product_queue.append((reactant, distance + 1))
+                product_queue.append(reactant)
 
     # print synthesis steps
     print(

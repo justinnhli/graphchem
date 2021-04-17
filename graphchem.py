@@ -7,7 +7,7 @@ from decimal import Decimal
 from heapq import heappush, heappop
 from os.path import realpath, join as join_path, dirname
 
-from typing import Any, Optional, Iterable, Sequence, Mapping, Tuple, List, Set, Dict
+from typing import Any, Optional, Generator, Iterable, Sequence, Mapping, Tuple, List, Set, Dict
 
 from pegparse import ASTWalker, create_parser_from_file
 
@@ -258,18 +258,13 @@ class Reaction:
 
 
 TempPres = namedtuple('TempPres', 'temperature, pressure') # in Celsius and kilopascals
-# priority is made of several things, compared in order:
-# 1. the difference from the goal molecule, a heuristics of sorts
-# 2. the earliest time a reaction is possible
-# 3. the minimum distance to an initial reactant
-# 4. the string representation of the reaction, as a tie-breaker
 Priority = namedtuple('Priority', 'heuristic, time, distance, string')
+ProductionMetadata = namedtuple('ProductionMetadata', 'reaction, time, distance')
 
 
 Molecules = Iterable[Molecule] # pylint: disable = unused-variable
 Reactions = Iterable[Reaction] # pylint: disable = unused-variable
 Timeline = Sequence[TempPres] # pylint: disable = unused-variable
-ProductionMetadata = Tuple[Reaction, int, int] # pylint: disable = unused-variable
 SearchResult = Dict[Product, ProductionMetadata] # pylint: disable = unused-variable
 
 
@@ -327,6 +322,8 @@ def reaction_first_possible(reaction, produced, timeline):
     # type: (Reaction, SearchResult, Timeline) -> int
     """Calculate the earliest time a reaction is favorable.
 
+    This function assumes all reactants are already produced.
+
     Parameters:
         reaction (Reaction): The reaction to consider.
         produced (SearchResult): When different chemicals have been produced
@@ -343,8 +340,60 @@ def reaction_first_possible(reaction, produced, timeline):
 
 
 def search(reactions, initial_reactants, final_product, timeline):
-    # type: (Reactions, Molecules, Molecule, Timeline) -> SearchResult
-    """Greedy hill-climbing to synthesize the product.
+    # type: (Reactions, Molecules, Molecule, Timeline) -> Generator[SearchResult, None, None]
+    """Greedily hill-climbing to synthesize the product.
+
+    This search algorithm is slightly weird because the optimization metric is
+    not the same as the heuristic/fitness function. We would like to know the
+    earliest time at which the final product could be synthesized, which we can
+    determine via a topological traversal of the reaction network (with
+    additional timeline constraints). This is computationally expensive,
+    however, as it would require running all possible reactions at every
+    timestep.
+
+    Instead, we base our algorithm on hill-climbing, so that reactions with
+    products that resemble the final product occur first. The disadvantage of
+    this approach is that the final product will be synthesized at a later time
+    than the minimum. To remedy this disadvantage, the algorithm is coded to
+    have the anytime property: after it finds one pathway for synthesizing the
+    final product, it will continue searching for pathways that take less time
+    to do so. This is why the function is a generator: each successive result
+    will be a synthesis pathway that completes earlier than the previous result.
+    In the limit, this algorithm will find the same pathway (or one that
+    completes in the same amount of time) as the topological approach, although
+    it sacrifices both runtime (due to hill-climbing exploring later reactions)
+    and memory (to allow for the anytime property) to do so.
+
+    Algorithmically, we use a priority queue to keep track of which reactions
+    do not have any missing reactants, sorted by four metrics:
+
+    1. the difference from the goal molecule, a pseudo-heuristic
+    2. a pessimistic estimate of the earliest time all reactants are synthesized
+    3. the shortest distance to an initial reactant
+    4. the string representation of the reaction, as a tie-breaker
+
+    Each time we pop a reaction from the queue, its products are considered
+    synthesized, and we record the time that the reaction occurred. To achieve
+    the anytime property, products can be "re-synthesized" if the algorithm
+    encounters a different reaction that can occur earlier. The reactions that
+    consume that product are then added back into the queue, with a new estimate
+    of when they could occur, thus propagating this earlier synthesis pathway.
+
+    This narrative omits an optimization: when a reaction is popped from the
+    queue, it is not always necessary to consider its effects:
+
+    1. If the reaction is never possible given the temperature and pressure
+    conditions, the reaction could obviously never occur and can be ignored.
+
+    2. If the reaction has already occurred at an earlier time. This is possible
+    if a reaction is added to the priority queue multiple times, due to a
+    reactant having an improved synthesis time estimate. The later reaction will
+    not enable any new products, nor lead to an earlier synthesis time, and thus
+    can be ignored.
+
+    3. If the reaction cannot occur until after the final product is
+    synthesized. For a similar reason, this reaction could not lead to an
+    earlier synthesis pathway and can be ignored.
 
     Parameters:
         reactions (Reactions): List of reactions to consider.
@@ -352,7 +401,7 @@ def search(reactions, initial_reactants, final_product, timeline):
         final_product (Molecule): The product to synthesize.
         timeline (Timeline): The temperature and pressure timeline.
 
-    Returns:
+    Yields:
         SearchResult: The produced molecules and the reaction
             and time they were produced.
 
@@ -361,13 +410,22 @@ def search(reactions, initial_reactants, final_product, timeline):
     """
 
     # data structures
-    inputs = defaultdict(set) # type: Dict[Reactant, Set[Reaction]]
-    reactants = defaultdict(set) # type: Dict[Reaction, Set[Reactant]]
-    outputs = defaultdict(set) # type: Dict[Product, Set[Reaction]]
+    consumed_by = defaultdict(set) # type: Dict[Reactant, Set[Reaction]]
+    produced_by = defaultdict(set) # type: Dict[Product, Set[Reaction]]
 
-    # variables
+    # search variables
+    missing_reactants = defaultdict(set) # type: Dict[Reaction, Set[Reactant]]
     queue = [] # type: List[Tuple[Priority, Reaction]]
     produced = {} # type: SearchResult
+    reacted = {} # type: Dict[Reaction, int]
+
+    # organize the reactions into data structures
+    for reaction in reactions:
+        for reactant in reaction.reactants:
+            consumed_by[reactant].add(reaction)
+        missing_reactants[reaction].update(reaction.reactants)
+        for product in reaction.products:
+            produced_by[product].add(reaction)
 
     def produce(product, time, distance, producer=None):
         # type: (Product, int, int, Optional[Reaction]) -> None
@@ -379,51 +437,41 @@ def search(reactions, initial_reactants, final_product, timeline):
             distance (int): The minimum distance to an initial reactant.
             producer (Optional[Reaction]): The reaction that produced the molecule.
         """
-        produced[product] = (producer, time, distance)
-        for reaction in inputs[product]:
-            reactants[reaction].remove(product)
-            if not reactants[reaction]:
+        produced[product] = ProductionMetadata(producer, time, distance)
+        for reaction in consumed_by[product]:
+            missing_reactants[reaction].remove(product)
+            if not missing_reactants[reaction]:
                 priority = Priority(
                     min(
                         molecular_difference(product, final_product)
                         for product in reaction.products
                     ),
-                    max(produced[reactant][1] for reactant in reaction.reactants),
+                    max(produced[reactant].time for reactant in reaction.reactants),
                     distance,
                     str(reaction),
                 )
                 heappush(queue, (priority, reaction))
 
-    # organize the reactions into data structures
-    for reaction in reactions:
-        for reactant in reaction.reactants:
-            inputs[reactant].add(reaction)
-        reactants[reaction].update(reaction.reactants)
-        for product in reaction.products:
-            outputs[product].add(reaction)
-
     # initialize the variables
     for reactant in initial_reactants:
-        produce(reactant, 0, 0)
+        produce(reactant, time=0, distance=0)
 
     # hill climb
-    while queue and final_product not in produced:
+    while queue:
         priority, reaction = heappop(queue)
         earliest_time = reaction_first_possible(reaction, produced, timeline)
         if earliest_time == -1:
             continue
+        if reaction in reacted and reacted[reaction] <= earliest_time:
+            continue
+        if final_product in produced and produced[final_product].time < earliest_time:
+            continue
+        reacted[reaction] = earliest_time
         for product in reaction.products:
-            if product not in produced:
-                produce(product, earliest_time, priority[2] + 1, producer=reaction)
-
-    # error if search failed
-    if not queue:
-        raise Exception(
-            f'unable to synthesize {final_product} from: '
-            + f'{", ".join(str(x) for x in initial_reactants)}'
-        )
-
-    return produced
+            if product not in produced or earliest_time < produced[product].time:
+                produce(product, earliest_time, priority.distance + 1, producer=reaction)
+                if product == final_product:
+                    yield produced
 
 
 def print_search_results(initial_reactants, final_product, timeline, produced):
@@ -553,8 +601,15 @@ def main():
     timeline = [TempPres(0, 100), TempPres(100, 100)]
 
     if args.action == 'search':
-        produced = search(reactions, initial_reactants, final_product, timeline)
-        print_search_results(initial_reactants, final_product, timeline, produced)
+        results = search(reactions, initial_reactants, final_product, timeline)
+        for result in results:
+            print()
+            print_search_results(
+                initial_reactants,
+                final_product,
+                timeline,
+                result,
+            )
     elif args.action == 'visualize':
         visualize_reactions(reactions)
     else:

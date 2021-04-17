@@ -300,7 +300,22 @@ def molecular_difference(source, target):
     return num_atom_difference(source, target) # TODO
 
 
-def reaction_possible(reaction, produced, timeline):
+def reaction_possible(reaction, temp_pres):
+    # type: (Reaction, TempPres) -> bool
+    """Determine whether a reaction is possible at a temperature and pressure.
+
+    Parameters:
+        reaction (Reaction): The reaction to consider.
+        temp_pres (TempPres): The temperature and pressure.
+
+    Returns:
+        bool: If the reaction is possible.
+    """
+    # pylint: disable = unused-argument
+    return True # TODO
+
+
+def reaction_first_possible(reaction, produced, timeline):
     # type: (Reaction, Mapping[Product, Tuple[Reaction, int]], Sequence[TempPres]) -> int
     """Calculate the earliest time a reaction is favorable.
 
@@ -314,17 +329,21 @@ def reaction_possible(reaction, produced, timeline):
         int: The time at which the reaction is favorable, or -1 otherwise.
     """
     reactants_ready = max(produced[reactant][1] for reactant in reaction.reactants)
-    return reactants_ready + 1 # TODO
+    for time, temp_pres in enumerate(timeline[reactants_ready:], start=reactants_ready):
+        if reaction_possible(reaction, temp_pres):
+            return time
+    return -1
 
 
-def search(reactions, initial_reactants, final_product):
-    # type: (Iterable[Reaction], Iterable[Molecule], Molecule) -> Dict[Product, Tuple[Reaction, int]]
+def search(reactions, initial_reactants, final_product, timeline):
+    # type: (Iterable[Reaction], Iterable[Molecule], Molecule, Sequence[TempPres]) -> Dict[Product, Tuple[Reaction, int]]
     """Greedy hill-climbing to synthesize the product.
 
     Parameters:
         reactions (Iterable[Reaction]): List of reactions to consider.
         initial_reactants (Iterable[Molecule]): List of initial reactants.
         final_product (Molecule): The product to synthesize.
+        timeline (Sequence[TempPres]): The temperature and pressure timeline.
 
     Returns:
         Dict[Product, (Reaction, time)]: The produced molecules and the reaction
@@ -378,7 +397,7 @@ def search(reactions, initial_reactants, final_product):
     # hill climb
     while queue and final_product not in produced:
         _, reaction = heappop(queue)
-        earliest_time = reaction_possible(reaction, produced, None)
+        earliest_time = reaction_first_possible(reaction, produced, timeline)
         if earliest_time == -1:
             continue
         for product in reaction.products:
@@ -510,9 +529,10 @@ def main():
         for reactant in initial_reactants
     ]
     final_product = parser.parse(final_product, 'molecule')
+    timeline = [TempPres(0, 100), TempPres(100, 100)]
 
     if args.action == 'search':
-        produced = search(reactions, initial_reactants, final_product)
+        produced = search(reactions, initial_reactants, final_product, timeline)
         print_search_results(initial_reactants, final_product, produced)
     elif args.action == 'visualize':
         visualize_reactions(reactions)

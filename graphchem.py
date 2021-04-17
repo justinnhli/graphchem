@@ -439,7 +439,7 @@ def search(reactions, initial_reactants, final_product, timeline):
         """
         produced[product] = ProductionMetadata(producer, time, distance)
         for reaction in consumed_by[product]:
-            missing_reactants[reaction].remove(product)
+            missing_reactants[reaction].discard(product)
             if not missing_reactants[reaction]:
                 priority = Priority(
                     min(

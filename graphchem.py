@@ -43,7 +43,7 @@ def least_common_mulitple(*ints):
 class ReactionWalker(ASTWalker):
     """A parser for chemical reactions."""
 
-    # pylint: disable = invalid-name, unused-argument, no-self-use
+    # pylint: disable = unused-argument, no-self-use
 
     def __init__(self):
         # type: (ReactionWalker) -> None

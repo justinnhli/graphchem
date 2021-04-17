@@ -115,8 +115,8 @@ class Molecule:
         """Initialize the Molecule.
 
         Parameters:
-            *components (Mapping[str, int]): The chemical formula components (element
-                and group counts).
+            *components (Mapping[str, int]): The chemical formula components
+                (element and group counts).
             formula (str): The formula for the molecule. Optional.
             name (str): The name of the molecule, if any. Optional.
         """
@@ -251,18 +251,12 @@ class Reaction:
         # type: (Reaction) -> str
         return ' '.join([
             ' + '.join(
-                (
-                    ('' if count == 1 else f'{count} ') +
-                    str(molecule)
-                )
+                ('' if count == 1 else f'{count} ') + str(molecule)
                 for count, molecule in self.reactant_counts
             ),
             '=',
             ' + '.join(
-                (
-                    ('' if count == 1 else f'{count} ') +
-                    str(molecule)
-                )
+                ('' if count == 1 else f'{count} ') + str(molecule)
                 for count, molecule in self.product_counts
             ),
         ])

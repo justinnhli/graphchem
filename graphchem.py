@@ -262,7 +262,7 @@ class Reaction:
         ])
 
 
-PressureTemp = namedtuple('PressureTemp', 'pressure, temperature')
+TempPres = namedtuple('TempPres', 'temperature, pressure') # in Celsius and kilopascals
 
 
 def num_atom_difference(source, target):
@@ -301,14 +301,14 @@ def molecular_difference(source, target):
 
 
 def reaction_possible(reaction, produced, timeline):
-    # type: (Reaction, Mapping[Product, Tuple[Reaction, int]], Sequence[PressureTemp]) -> int
+    # type: (Reaction, Mapping[Product, Tuple[Reaction, int]], Sequence[TempPres]) -> int
     """Calculate the earliest time a reaction is favorable.
 
     Parameters:
         reaction (Reaction): The reaction to consider.
         produced (Mapping[Product, Tuple[Reaction, time]]):
             When different chemicals have been produced
-        timeline (Any): The temperature and pressure timeline.
+        timeline (Sequence[TempPres]): The temperature and pressure timeline.
 
     Returns:
         int: The time at which the reaction is favorable, or -1 otherwise.

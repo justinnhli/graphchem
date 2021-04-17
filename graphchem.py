@@ -135,11 +135,7 @@ class Molecule:
 
     def __eq__(self, other):
         # type: (Molecule, Any) -> bool
-        return str(self) == str(other)
-
-    def __lt__(self, other):
-        # type: (Molecule, Any) -> bool
-        return (len(str(self)), str(self)) < (len(str(other)), str(other))
+        return isinstance(other, Molecule) and str(self) == str(other)
 
     def __hash__(self):
         # type: (Molecule) -> int
@@ -158,7 +154,7 @@ class Reaction:
     """A chemical reaction."""
 
     def __init__(self, reactants, products, energy=0):
-        # type: (Reaction, Sequence[MoleculeCount], Sequence[MoleculeCount], int) -> None
+        # type: (Reaction, Sequence[MoleculeCount], Sequence[MoleculeCount], float) -> None
         """Initialize the Reaction.
 
         Parameters:
@@ -240,7 +236,7 @@ class Reaction:
 
     def __eq__(self, other):
         # type: (Reaction, Any) -> bool
-        return str(self) == str(other)
+        return isinstance(other, Reaction) and str(self) == str(other)
 
     def __hash__(self):
         # type: (Reaction) -> int
@@ -270,10 +266,11 @@ TempPres = namedtuple('TempPres', 'temperature, pressure') # in Celsius and kilo
 Priority = namedtuple('Priority', 'heuristic, time, distance, string')
 
 
+Molecules = Iterable[Molecule] # pylint: disable = unused-variable
 Reactions = Iterable[Reaction] # pylint: disable = unused-variable
 Timeline = Sequence[TempPres] # pylint: disable = unused-variable
 ProductionMetadata = Tuple[Reaction, int, int] # pylint: disable = unused-variable
-SearchResult = Mapping[Product, ProductionMetadata] # pylint: disable = unused-variable
+SearchResult = Dict[Product, ProductionMetadata] # pylint: disable = unused-variable
 
 
 def num_atom_difference(source, target):
@@ -332,9 +329,8 @@ def reaction_first_possible(reaction, produced, timeline):
 
     Parameters:
         reaction (Reaction): The reaction to consider.
-        produced (Mapping[Product, Tuple[Reaction, time]]):
-            When different chemicals have been produced
-        timeline (Sequence[TempPres]): The temperature and pressure timeline.
+        produced (SearchResult): When different chemicals have been produced
+        timeline (Timeline): The temperature and pressure timeline.
 
     Returns:
         int: The time at which the reaction is favorable, or -1 otherwise.
@@ -347,17 +343,17 @@ def reaction_first_possible(reaction, produced, timeline):
 
 
 def search(reactions, initial_reactants, final_product, timeline):
-    # type: (Reactions, Iterable[Molecule], Molecule, Timeline) -> SearchResult
+    # type: (Reactions, Molecules, Molecule, Timeline) -> SearchResult
     """Greedy hill-climbing to synthesize the product.
 
     Parameters:
-        reactions (Iterable[Reaction]): List of reactions to consider.
-        initial_reactants (Iterable[Molecule]): List of initial reactants.
+        reactions (Reactions): List of reactions to consider.
+        initial_reactants (Molecules): List of initial reactants.
         final_product (Molecule): The product to synthesize.
         timeline (Timeline): The temperature and pressure timeline.
 
     Returns:
-        Dict[Product, (Reaction, time)]: The produced molecules and the reaction
+        SearchResult: The produced molecules and the reaction
             and time they were produced.
 
     Raises:
@@ -371,7 +367,7 @@ def search(reactions, initial_reactants, final_product, timeline):
 
     # variables
     queue = [] # type: List[Tuple[Priority, Reaction]]
-    produced = {} # type: Dict[Product, ProductionMetadata]
+    produced = {} # type: SearchResult
 
     def produce(product, time, distance, producer=None):
         # type: (Product, int, int, Optional[Reaction]) -> None

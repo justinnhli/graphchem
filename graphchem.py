@@ -320,7 +320,7 @@ def reaction_possible(reaction, temp_pres):
 
 def reaction_first_possible(reaction, produced, timeline):
     # type: (Reaction, SearchResult, Timeline) -> int
-    """Calculate the earliest time a reaction is favorable.
+    """Calculate the earliest time a reaction is possible.
 
     This function assumes all reactants are already produced.
 
@@ -330,7 +330,7 @@ def reaction_first_possible(reaction, produced, timeline):
         timeline (Timeline): The temperature and pressure timeline.
 
     Returns:
-        int: The time at which the reaction is favorable, or -1 otherwise.
+        int: The time at which the reaction is possible, or -1 otherwise.
     """
     reactants_ready = max(produced[reactant][1] for reactant in reaction.reactants)
     for time, temp_pres in enumerate(timeline[reactants_ready:], start=reactants_ready):

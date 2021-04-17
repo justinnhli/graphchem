@@ -264,6 +264,13 @@ class Reaction:
 TempPres = namedtuple('TempPres', 'temperature, pressure') # in Celsius and kilopascals
 
 
+Reactions = Iterable[Reaction] # pylint: disable = unused-variable
+Timeline = Sequence[TempPres] # pylint: disable = unused-variable
+Priority = Tuple[float, int, str] # pylint: disable = unused-variable
+ProductionMetadata = Tuple[Reaction, int, int] # pylint: disable = unused-variable
+SearchResult = Mapping[Product, ProductionMetadata] # pylint: disable = unused-variable
+
+
 def num_atom_difference(source, target):
     # type: (Molecule, Molecule) -> int
     """Calculate the number of atoms different between two molecules.
@@ -315,7 +322,7 @@ def reaction_possible(reaction, temp_pres):
 
 
 def reaction_first_possible(reaction, produced, timeline):
-    # type: (Reaction, Mapping[Product, Tuple[Reaction, int]], Sequence[TempPres]) -> int
+    # type: (Reaction, SearchResult, Timeline) -> int
     """Calculate the earliest time a reaction is favorable.
 
     Parameters:
@@ -335,14 +342,14 @@ def reaction_first_possible(reaction, produced, timeline):
 
 
 def search(reactions, initial_reactants, final_product, timeline):
-    # type: (Iterable[Reaction], Iterable[Molecule], Molecule, Sequence[TempPres]) -> Dict[Product, Tuple[Reaction, int]]
+    # type: (Reactions, Iterable[Molecule], Molecule, Timeline) -> SearchResult
     """Greedy hill-climbing to synthesize the product.
 
     Parameters:
         reactions (Iterable[Reaction]): List of reactions to consider.
         initial_reactants (Iterable[Molecule]): List of initial reactants.
         final_product (Molecule): The product to synthesize.
-        timeline (Sequence[TempPres]): The temperature and pressure timeline.
+        timeline (Timeline): The temperature and pressure timeline.
 
     Returns:
         Dict[Product, (Reaction, time)]: The produced molecules and the reaction
@@ -358,11 +365,18 @@ def search(reactions, initial_reactants, final_product, timeline):
     outputs = defaultdict(set) # type: Dict[Product, Set[Reaction]]
 
     # variables
-    queue = [] # type: List[Tuple[Tuple[float, int, str], Reaction]]
-    produced = {} # type: Dict[Product, Tuple[Reaction, int]]
+    queue = [] # type: List[Tuple[Priority, Reaction]]
+    produced = {} # type: Dict[Product, ProductionMetadata]
 
     def produce(product, time, producer=None):
         # type: (Product, int, Optional[Reaction]) -> None
+        """Add a molecule to the production record.
+
+        Parameters:
+            product (Product): The molecule that was produced.
+            time (int): The time at which the molecule was produced.
+            producer (Optional[Reaction]): The reaction that produced the molecule.
+        """
         produced[product] = (producer, time)
         for reaction in inputs[product]:
             reactants[reaction].remove(product)
@@ -414,7 +428,7 @@ def search(reactions, initial_reactants, final_product, timeline):
 
 
 def print_search_results(initial_reactants, final_product, produced):
-    # type: (Iterable[Reaction], Molecule, Mapping[Product, Tuple[Reaction, int]]) -> None
+    # type: (Reactions, Molecule, SearchResult) -> None
     # re-trace synthesis steps
     priorities = {
         None: (0, -len(produced)),
@@ -445,7 +459,7 @@ def print_search_results(initial_reactants, final_product, produced):
 
 
 def visualize_reactions(reactions):
-    # type: (List[Reaction]) -> None
+    # type: (Reactions) -> None
     lines = []
     lines.append('digraph {')
     for reaction in reactions:

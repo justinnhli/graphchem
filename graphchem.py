@@ -11,6 +11,7 @@ from typing import Any, Optional, Iterable, Sequence, Mapping, Tuple, List, Set,
 
 from pegparse import ASTWalker, create_parser_from_file
 
+
 MoleculeCount = namedtuple('MoleculeCount', 'count molecule')
 
 
@@ -64,14 +65,12 @@ class ReactionWalker(ASTWalker):
         return results
 
     def _parse_molecule_count(self, ast, results):
-        # type: (ReactionWalker, ASTNode, List[Any]) -> Optional[MoleculeCount]
+        # type: (ReactionWalker, ASTNode, List[Any]) -> MoleculeCount
+        assert len(results) in (1, 2)
         if len(results) == 1:
             return MoleculeCount(Decimal(1), results[0])
-        elif len(results) == 2:
-            return MoleculeCount(*results)
         else:
-            assert False
-            return None
+            return MoleculeCount(*results)
 
     def _parse_molecule(self, ast, results):
         # type: (ReactionWalker, ASTNode, List[Any]) -> Molecule

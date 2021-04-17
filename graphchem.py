@@ -426,8 +426,16 @@ def search(reactions, initial_reactants, final_product, timeline):
     return produced
 
 
-def print_search_results(initial_reactants, final_product, produced):
-    # type: (Reactions, Molecule, SearchResult) -> None
+def print_search_results(initial_reactants, final_product, timeline, produced):
+    # type: (Reactions, Molecule, Timeline, SearchResult) -> None
+    """Print search results.
+
+    Parameters:
+        initial_reactants (Molecules): List of initial reactants.
+        final_product (Molecule): The product to synthesize.
+        timeline (Timeline): The temperature and pressure timeline.
+        produced (SearchResult): When different chemicals have been produced
+    """
     # re-trace synthesis steps
     priorities = {
         None: (0, -len(produced)),
@@ -451,10 +459,11 @@ def print_search_results(initial_reactants, final_product, produced):
     print()
     for reaction, product in sorted(steps, key=(lambda step: priorities[step[0]])):
         time, _ = priorities[reaction]
+        temperature, pressure = timeline[time]
         if reaction is None:
-            print(f'{time}: {product} given')
+            print(f'{time} ({temperature}C, {pressure}kPa): {product} given')
         else:
-            print(f'{time}: {product} produced by {reaction}')
+            print(f'{time} ({temperature}C, {pressure}kPa): {product} produced by {reaction}')
 
 
 def visualize_reactions(reactions):
@@ -545,7 +554,7 @@ def main():
 
     if args.action == 'search':
         produced = search(reactions, initial_reactants, final_product, timeline)
-        print_search_results(initial_reactants, final_product, produced)
+        print_search_results(initial_reactants, final_product, timeline, produced)
     elif args.action == 'visualize':
         visualize_reactions(reactions)
     else:

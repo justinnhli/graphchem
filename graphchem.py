@@ -595,6 +595,22 @@ def main():
         args.output = 'HCOOH'
         args.reactions = 'LARGE_REACTION_SET'
 
+    if args.reactions == 'LARGE_REACTION_SET':
+        reaction_set = LARGE_REACTION_SET
+    elif args.reactions == 'SMALL_REACTION_SET':
+        reaction_set = SMALL_REACTION_SET
+    else:
+        arg_parser.error(f'undefined reactions set: {args.reactions}')
+    parser = ReactionWalker()
+    reactions = [
+        parser.parse(reaction)
+        for reaction in reaction_set
+    ]
+
+    if args.action == 'visualize':
+        visualize_reactions(reactions)
+        exit()
+
     if not args.input:
         arg_parser.error('no initial reactant given')
     if not args.output:
@@ -602,18 +618,7 @@ def main():
 
     initial_reactants = args.input
     final_product = args.output
-    if args.reactions == 'LARGE_REACTION_SET':
-        reaction_set = LARGE_REACTION_SET
-    elif args.reactions == 'SMALL_REACTION_SET':
-        reaction_set = SMALL_REACTION_SET
-    else:
-        arg_parser.error(f'undefined reactions set: {args.reactions}')
 
-    parser = ReactionWalker()
-    reactions = [
-        parser.parse(reaction)
-        for reaction in reaction_set
-    ]
     initial_reactants = [
         parser.parse(reactant, 'molecule')
         for reactant in initial_reactants
@@ -623,7 +628,16 @@ def main():
 
     if args.action == 'search':
         results = search(reactions, initial_reactants, final_product, timeline)
-        for result in results:
+        print(
+            f'synthesizing {final_product} from: '
+            + f'{", ".join(str(x) for x in initial_reactants)}'
+        )
+        print(indent(
+            '\n'.join(str(reaction) for reaction in reaction_set),
+            '    ',
+        ))
+        broke = False
+        for index, result in enumerate(results, start=1):
             print()
             print(f'pathway {index}:')
             print(indent(
@@ -635,8 +649,14 @@ def main():
                 ),
                 '    ',
             ))
-    elif args.action == 'visualize':
-        visualize_reactions(reactions)
+            print()
+            response = input('keep searching (Y/n)? ')
+            if response and response[0].lower() == 'n':
+                broke = True
+                break
+        if not broke:
+            print()
+            print('no more results')
     else:
         arg_parser.error(f'undefined action: {args.action}')
 

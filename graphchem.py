@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from collections import namedtuple, Counter, defaultdict
 from decimal import Decimal
 from heapq import heappush, heappop
-from os.path import realpath, join as join_path, dirname
+from pathlib import Path
 
 from typing import Any, Optional, Generator, Iterable, Sequence, Mapping, Tuple, List, Set, Dict
 
@@ -49,10 +49,7 @@ class ReactionWalker(ASTWalker):
         # type: (ReactionWalker) -> None
         """Initialize a ReactionWalker."""
         super().__init__(
-            create_parser_from_file(join_path(
-                dirname(realpath(__file__)),
-                'reactions.peg',
-            )),
+            create_parser_from_file(Path(__file__).parent.joinpath('reactions.peg')),
             'reaction',
         )
 

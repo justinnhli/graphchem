@@ -6,6 +6,7 @@ from collections import namedtuple, Counter, defaultdict
 from decimal import Decimal
 from heapq import heappush, heappop
 from pathlib import Path
+from textwrap import indent
 
 from typing import Any, Optional, Generator, Iterable, Sequence, Mapping, Tuple, List, Set, Dict
 
@@ -494,7 +495,7 @@ def search(reactions, initial_reactants, final_product, timeline):
                     yield produced
 
 
-def print_search_results(initial_reactants, final_product, timeline, produced):
+def list_synthesis_steps(initial_reactants, final_product, timeline, produced):
     # type: (Reactions, Molecule, Timeline, SearchResult) -> None
     """Print search results.
 
@@ -503,6 +504,9 @@ def print_search_results(initial_reactants, final_product, timeline, produced):
         final_product (Molecule): The product to synthesize.
         timeline (Timeline): The temperature and pressure timeline.
         produced (SearchResult): When different chemicals have been produced
+    
+    Returns:
+        str: The list of reactions to synthesize the final product.
     """
     # re-trace synthesis steps
     priorities = {
@@ -520,18 +524,15 @@ def print_search_results(initial_reactants, final_product, timeline, produced):
                 product_queue.append(reactant)
 
     # print synthesis steps
-    print(
-        f'synthesizing {final_product} from: '
-        + f'{", ".join(str(x) for x in initial_reactants)}'
-    )
-    print()
+    lines = []
     for reaction, product in sorted(steps, key=(lambda step: priorities[step[0]])):
         time, _ = priorities[reaction]
         temperature, pressure = timeline[time]
         if reaction is None:
-            print(f'{time} ({temperature}C, {pressure}kPa): {product} given')
+            lines.append(f'{time} ({temperature}C, {pressure}kPa): {product} given')
         else:
-            print(f'{time} ({temperature}C, {pressure}kPa): {product} produced by {reaction}')
+            lines.append(f'{time} ({temperature}C, {pressure}kPa): {product} produced by {reaction}')
+    return '\n'.join(lines)
 
 
 def visualize_reactions(reactions):
@@ -624,12 +625,16 @@ def main():
         results = search(reactions, initial_reactants, final_product, timeline)
         for result in results:
             print()
-            print_search_results(
-                initial_reactants,
-                final_product,
-                timeline,
-                result,
-            )
+            print(f'pathway {index}:')
+            print(indent(
+                list_synthesis_steps(
+                    initial_reactants,
+                    final_product,
+                    timeline,
+                    result,
+                ),
+                '    ',
+            ))
     elif args.action == 'visualize':
         visualize_reactions(reactions)
     else:

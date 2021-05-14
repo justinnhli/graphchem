@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """A script to determine reactions necessary to synthesize a molecule."""
 
+import sys
 from argparse import ArgumentParser
 from collections import namedtuple, Counter, defaultdict
 from decimal import Decimal
@@ -495,16 +496,15 @@ def search(reactions, initial_reactants, final_product, timeline):
                     yield produced
 
 
-def list_synthesis_steps(initial_reactants, final_product, timeline, produced):
-    # type: (Reactions, Molecule, Timeline, SearchResult) -> None
+def list_synthesis_steps(final_product, timeline, produced):
+    # type: (Molecule, Timeline, SearchResult) -> str
     """Print search results.
 
     Parameters:
-        initial_reactants (Molecules): List of initial reactants.
         final_product (Molecule): The product to synthesize.
         timeline (Timeline): The temperature and pressure timeline.
         produced (SearchResult): When different chemicals have been produced
-    
+
     Returns:
         str: The list of reactions to synthesize the final product.
     """
@@ -577,6 +577,39 @@ LARGE_REACTION_SET = [
 ]
 
 
+def interactive_search(reactions, initial_reactants, final_product, timeline):
+    # type: (Reactions, Molecules, Molecule, Timeline) -> None
+    results = search(reactions, initial_reactants, final_product, timeline)
+    print(
+        f'synthesizing {final_product} from: '
+        + f'{", ".join(str(x) for x in initial_reactants)}'
+    )
+    print(indent(
+        '\n'.join(str(reaction) for reaction in reactions),
+        '    ',
+    ))
+    broke = False
+    for index, result in enumerate(results, start=1):
+        print()
+        print(f'pathway {index}:')
+        print(indent(
+            list_synthesis_steps(
+                final_product,
+                timeline,
+                result,
+            ),
+            '    ',
+        ))
+        print()
+        response = input('keep searching (Y/n)? ')
+        if response and response[0].lower() == 'n':
+            broke = True
+            break
+    if not broke:
+        print()
+        print('no more results')
+
+
 def main():
     # type: () -> None
     arg_parser = ArgumentParser()
@@ -609,7 +642,7 @@ def main():
 
     if args.action == 'visualize':
         visualize_reactions(reactions)
-        exit()
+        sys.exit()
 
     if not args.input:
         arg_parser.error('no initial reactant given')
@@ -627,36 +660,7 @@ def main():
     timeline = [Tempressure(0, 100), Tempressure(100, 100)]
 
     if args.action == 'search':
-        results = search(reactions, initial_reactants, final_product, timeline)
-        print(
-            f'synthesizing {final_product} from: '
-            + f'{", ".join(str(x) for x in initial_reactants)}'
-        )
-        print(indent(
-            '\n'.join(str(reaction) for reaction in reaction_set),
-            '    ',
-        ))
-        broke = False
-        for index, result in enumerate(results, start=1):
-            print()
-            print(f'pathway {index}:')
-            print(indent(
-                list_synthesis_steps(
-                    initial_reactants,
-                    final_product,
-                    timeline,
-                    result,
-                ),
-                '    ',
-            ))
-            print()
-            response = input('keep searching (Y/n)? ')
-            if response and response[0].lower() == 'n':
-                broke = True
-                break
-        if not broke:
-            print()
-            print('no more results')
+        interactive_search(reactions, initial_reactants, final_product, timeline)
     else:
         arg_parser.error(f'undefined action: {args.action}')
 

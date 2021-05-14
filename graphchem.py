@@ -255,14 +255,14 @@ class Reaction:
         ])
 
 
-TempPres = namedtuple('TempPres', 'temperature, pressure') # in Celsius and kilopascals
+Tempressure = namedtuple('Tempressure', 'temperature, pressure') # in Celsius and kilopascals
 Priority = namedtuple('Priority', 'heuristic, time, distance, string')
 ProductionMetadata = namedtuple('ProductionMetadata', 'reaction, time, distance')
 
 
 Molecules = Iterable[Molecule] # pylint: disable = unused-variable
 Reactions = Iterable[Reaction] # pylint: disable = unused-variable
-Timeline = Sequence[TempPres] # pylint: disable = unused-variable
+Timeline = Sequence[Tempressure] # pylint: disable = unused-variable
 SearchResult = Dict[Product, ProductionMetadata] # pylint: disable = unused-variable
 
 
@@ -301,13 +301,13 @@ def molecular_difference(source, target):
     return num_atom_difference(source, target) # TODO
 
 
-def reaction_possible(reaction, temp_pres):
-    # type: (Reaction, TempPres) -> bool
+def reaction_possible(reaction, tempressure):
+    # type: (Reaction, Tempressure) -> bool
     """Determine whether a reaction is possible at a temperature and pressure.
 
     Parameters:
         reaction (Reaction): The reaction to consider.
-        temp_pres (TempPres): The temperature and pressure.
+        tempressure (Tempressure): The temperature and pressure.
 
     Returns:
         bool: If the reaction is possible.
@@ -331,8 +331,8 @@ def reaction_first_possible(reaction, produced, timeline):
         int: The time at which the reaction is possible, or -1 otherwise.
     """
     reactants_ready = max(produced[reactant][1] for reactant in reaction.reactants)
-    for time, temp_pres in enumerate(timeline[reactants_ready:], start=reactants_ready):
-        if reaction_possible(reaction, temp_pres):
+    for time, tempressure in enumerate(timeline[reactants_ready:], start=reactants_ready):
+        if reaction_possible(reaction, tempressure):
             return time
     return -1
 
@@ -624,7 +624,7 @@ def main():
         for reactant in initial_reactants
     ]
     final_product = parser.parse(final_product, 'molecule')
-    timeline = [TempPres(0, 100), TempPres(100, 100)]
+    timeline = [Tempressure(0, 100), Tempressure(100, 100)]
 
     if args.action == 'search':
         results = search(reactions, initial_reactants, final_product, timeline)

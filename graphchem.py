@@ -535,6 +535,43 @@ def list_synthesis_steps(initial_reactants, final_product, timeline, produced):
     return '\n'.join(lines)
 
 
+def interactive_search(reactions, initial_reactants, final_product, timeline):
+    # type: (Reactions, Molecules, Molecule, Timeline) -> None
+    reactants_str = ' and '.join(', '.join(str(x) for x in initial_reactants).rsplit(', ', 1))
+    print(
+        f'synthesizing {final_product} from {reactants_str} using reactions:'
+    )
+    print(indent(
+        '\n'.join(str(reaction) for reaction in reactions),
+        '    ',
+    ))
+    count = 0
+    broke = False
+    results = search(reactions, initial_reactants, final_product, timeline)
+    for count, result in enumerate(results, start=1):
+        print()
+        print(f'pathway {count}:')
+        print(indent(
+            list_synthesis_steps(
+                final_product,
+                timeline,
+                result,
+            ),
+            '    ',
+        ))
+        print()
+        response = input('keep searching (Y/n)? ')
+        if response and response[0].lower() == 'n':
+            broke = True
+            break
+    if not broke:
+        print()
+        if count == 0:
+            print(f'no pathways')
+        else:
+            print(f'no more pathways ({count} pathways total)')
+
+
 def visualize_reactions(reactions):
     # type: (Reactions) -> None
     lines = []
@@ -632,41 +669,7 @@ def main():
     final_product = parser.parse(args.output, 'molecule')
     timeline = [TempPres(0, 100), TempPres(100, 100)]
 
-    if args.action == 'search':
-        results = search(reactions, initial_reactants, final_product, timeline)
-        print(
-            f'synthesizing {final_product} from '
-            + f'{", ".join(str(x) for x in initial_reactants)}'
-            + ' using reactions:'
-        )
-        print(indent(
-            '\n'.join(str(reaction) for reaction in reaction_set),
-            '    ',
-        ))
-        count = 0
-        broke = False
-        for count, result in enumerate(results, start=1):
-            print()
-            print(f'pathway {index}:')
-            print(indent(
-                list_synthesis_steps(
-                    initial_reactants,
-                    final_product,
-                    timeline,
-                    result,
-                ),
-                '    ',
-            ))
-            print()
-            response = input('keep searching (Y/n)? ')
-            if response and response[0].lower() == 'n':
-                broke = True
-                break
-        if not broke:
-            print()
-            print(f'no more results ({count} results total)')
-    else:
-        arg_parser.error(f'undefined action: {args.action}')
+    interactive_search(reactions, initial_reactants, final_product, timeline)
 
 
 if __name__ == '__main__':

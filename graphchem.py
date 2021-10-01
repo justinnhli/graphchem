@@ -484,6 +484,8 @@ class ReactionNetwork:
             Set[str]: The reactions that are newly triggered.
         """
         reactions = set()
+        if reactant not in self.graph.nodes:
+            return reactions
         for reaction in self.graph.successors(reactant):
             if self._all_reactants_synthesized(reaction):
                 self.graph.nodes[reaction]['triggered'] = True
@@ -570,8 +572,8 @@ class ReactionNetwork:
         """
         self._reset_synthesis()
         for reactant in reactants:
-            reactant_node = self.graph.nodes[reactant]
-            reactant_node['pathways'] = set([frozenset()])
+            if reactant in self.graph.nodes:
+                self.graph.nodes[reactant]['pathways'] = set([frozenset()])
         new_reactants = set(reactants)
         while new_reactants:
             reactions = set()

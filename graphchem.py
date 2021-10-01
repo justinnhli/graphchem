@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A script to determine reactions necessary to synthesize a molecule."""
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from collections import namedtuple, Counter, defaultdict
 from decimal import Decimal
 from heapq import heappush, heappop
@@ -577,8 +577,8 @@ LARGE_REACTION_SET = [
 ]
 
 
-def main():
-    # type: () -> None
+def parse_args():
+    # type: () -> Namespace
     arg_parser = ArgumentParser()
     arg_parser.add_argument(
         dest='action', nargs='?',
@@ -596,34 +596,40 @@ def main():
         args.reactions = 'LARGE_REACTION_SET'
 
     if args.reactions == 'LARGE_REACTION_SET':
-        reaction_set = LARGE_REACTION_SET
+        args.reaction_set = LARGE_REACTION_SET
     elif args.reactions == 'SMALL_REACTION_SET':
-        reaction_set = SMALL_REACTION_SET
+        args.reaction_set = SMALL_REACTION_SET
     else:
         arg_parser.error(f'undefined reactions set: {args.reactions}')
+
+    if args.action != 'visualize':
+        if not args.input:
+            arg_parser.error('no initial reactant given')
+        if not args.output:
+            arg_parser.error('no final product given')
+
+    return args
+
+
+def main():
+    # type: () -> None
+    args = parse_args()
+
     parser = ReactionWalker()
     reactions = [
         parser.parse(reaction)
-        for reaction in reaction_set
+        for reaction in args.reaction_set
     ]
 
     if args.action == 'visualize':
         visualize_reactions(reactions)
         exit()
 
-    if not args.input:
-        arg_parser.error('no initial reactant given')
-    if not args.output:
-        arg_parser.error('no final product given')
-
-    initial_reactants = args.input
-    final_product = args.output
-
     initial_reactants = [
         parser.parse(reactant, 'molecule')
-        for reactant in initial_reactants
+        for reactant in args.input
     ]
-    final_product = parser.parse(final_product, 'molecule')
+    final_product = parser.parse(args.output, 'molecule')
     timeline = [TempPres(0, 100), TempPres(100, 100)]
 
     if args.action == 'search':

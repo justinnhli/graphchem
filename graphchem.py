@@ -11,7 +11,8 @@ from textwrap import indent
 
 from typing import Any, Optional, Generator, Iterable, Sequence, Mapping, Tuple, List, Set, Dict
 
-from pegparse import ASTWalker, create_parser_from_file
+# pylint: disable = no-name-in-module
+from pegparse import ASTWalker, ASTNode, create_parser_from_file
 
 
 MoleculeCount = namedtuple('MoleculeCount', 'count molecule')
@@ -256,14 +257,74 @@ class Reaction:
         ])
 
 
-Tempressure = namedtuple('Tempressure', 'temperature, pressure') # in Celsius and kilopascals
+TempPres = namedtuple('TempPres', 'temperature, pressure') # in Celsius and kilopascals
+
+
+class Timeline:
+
+    # acyclic; cycles of temperature/pressure must have explicit time dependence
+
+    def __init__(self):
+        self.temp_pres = []
+        self.graph = defaultdict(set)
+        self.changed = False
+        self.predecessors = defaultdict(set)
+        self.topo_order = []
+
+    def __getitem__(self, tpid):
+        return self.temp_pres[tpid]
+
+    def add(self, temp_pres):
+        self.temp_pres.append(temp_pres)
+        return len(self.temp_pres) - 1
+
+    def add_transition(self, tpid1, tpid2):
+        self.graph[tpid1].add(tpid2)
+        self.changed = True
+
+    def is_predecessor(self, tpid1, tpid2):
+        if self.changed:
+            self._build_cache()
+        return tpid1 in self.predecessors.get(tpid2, set())
+
+    def _build_cache(self):
+        srcs = defaultdict(set)
+        for src, dsts in self.graph.items():
+            for dst in dsts:
+                srcs[dst].add(src)
+        self.predecessors = defaultdict(set)
+        self.topo_order = []
+        queue = list(self.graph.keys() - srcs.keys())
+        visited = set()
+        while queue:
+            node = queue.pop()
+            visited.add(node)
+            self.topo_order.append(node)
+            self.predecessors[node].update([node], *(self.predecessors[src] for src in srcs[node]))
+            queue.extend(
+                successor for successor in self.graph.get(node, set())
+                if srcs[successor] <= visited
+            )
+        self.changed = False
+
+    def convergence_points(self, *tpids):
+        if self.changed:
+            self._build_cache()
+        srcs = set(tpids)
+        results = set()
+        for node in self.topo_order:
+            preds = self.predecessors[node]
+            if srcs <= preds and not preds.intersection(results):
+                results.add(node)
+        return results
+
+
 Priority = namedtuple('Priority', 'heuristic, time, distance, string')
 ProductionMetadata = namedtuple('ProductionMetadata', 'reaction, time, distance')
 
 
 Molecules = Iterable[Molecule] # pylint: disable = unused-variable
 Reactions = Iterable[Reaction] # pylint: disable = unused-variable
-Timeline = Sequence[Tempressure] # pylint: disable = unused-variable
 SearchResult = Dict[Product, ProductionMetadata] # pylint: disable = unused-variable
 
 
@@ -302,23 +363,27 @@ def molecular_difference(source, target):
     return num_atom_difference(source, target) # TODO
 
 
-def reaction_possible(reaction, tempressure):
-    # type: (Reaction, Tempressure) -> bool
+def reaction_possible(reaction, temp_pres):
+    # type: (Reaction, TempPres) -> bool
     """Determine whether a reaction is possible at a temperature and pressure.
 
     Parameters:
         reaction (Reaction): The reaction to consider.
-        tempressure (Tempressure): The temperature and pressure.
+        temp_pres (TempPres): The temperature and pressure.
 
     Returns:
         bool: If the reaction is possible.
     """
     # pylint: disable = unused-argument
-    return True # TODO
+    # TODO
+    if str(reaction) == 'CO + 3 H2 = CH4 + H2O':
+        return temp_pres.temperature == 100 and temp_pres.pressure == 100
+    else:
+        return True
 
 
 def reaction_first_possible(reaction, produced, timeline):
-    # type: (Reaction, SearchResult, Timeline) -> int
+    # type: (Reaction, SearchResult, Timeline) -> List[int]
     """Calculate the earliest time a reaction is possible.
 
     This function assumes all reactants are already produced.
@@ -329,11 +394,19 @@ def reaction_first_possible(reaction, produced, timeline):
         timeline (Timeline): The temperature and pressure timeline.
 
     Returns:
-        int: The time at which the reaction is possible, or -1 otherwise.
+        List[int]: The first times at which the reaction is possible.
     """
-    reactants_ready = max(produced[reactant][1] for reactant in reaction.reactants)
-    for time, tempressure in enumerate(timeline[reactants_ready:], start=reactants_ready):
-        if reaction_possible(reaction, tempressure):
+    # FIXME
+    # given timeline, how to calculate when a reaction is first possible?
+    # this is equivalent to finding the first node which all reactants converge
+    # or rather, the *set* of nodes at which all reactants converge
+    # FIXME
+    # however, it's now possible for reactants to be available in two disjoint places
+    reactants_ready = set(produced[reactant][1] for reactant in reaction.reactants)
+    for tpid in timeline.convergence_points(*reactants_ready):
+        pass # FIXME
+    for time, temp_pres in enumerate(timeline[reactants_ready:], start=reactants_ready):
+        if reaction_possible(reaction, temp_pres):
             return time
     return -1
 
@@ -657,7 +730,11 @@ def main():
         for reactant in initial_reactants
     ]
     final_product = parser.parse(final_product, 'molecule')
-    timeline = [Tempressure(0, 100), Tempressure(100, 100)]
+    timeline = Timeline()
+    timeline.add_transition(
+        timeline.add(TempPres(0, 100)),
+        timeline.add(TempPres(100, 100)),
+    )
 
     if args.action == 'search':
         interactive_search(reactions, initial_reactants, final_product, timeline)

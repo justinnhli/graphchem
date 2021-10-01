@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """A script to determine reactions necessary to synthesize a molecule."""
 
+import sys
 from argparse import ArgumentParser, Namespace
 from collections import namedtuple, Counter, defaultdict
 from decimal import Decimal
@@ -495,16 +496,15 @@ def search(reactions, initial_reactants, final_product, timeline):
                     yield produced
 
 
-def list_synthesis_steps(initial_reactants, final_product, timeline, produced):
-    # type: (Reactions, Molecule, Timeline, SearchResult) -> None
+def list_synthesis_steps(final_product, timeline, produced):
+    # type: (Molecule, Timeline, SearchResult) -> str
     """Print search results.
 
     Parameters:
-        initial_reactants (Molecules): List of initial reactants.
         final_product (Molecule): The product to synthesize.
         timeline (Timeline): The temperature and pressure timeline.
         produced (SearchResult): When different chemicals have been produced
-    
+
     Returns:
         str: The list of reactions to synthesize the final product.
     """
@@ -567,7 +567,7 @@ def interactive_search(reactions, initial_reactants, final_product, timeline):
     if not broke:
         print()
         if count == 0:
-            print(f'no pathways')
+            print('no pathways')
         else:
             print(f'no more pathways ({count} pathways total)')
 
@@ -660,7 +660,7 @@ def main():
 
     if args.action == 'visualize':
         visualize_reactions(reactions)
-        exit()
+        sys.exit()
 
     initial_reactants = [
         parser.parse(reactant, 'molecule')

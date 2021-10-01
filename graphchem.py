@@ -629,15 +629,17 @@ def main():
     if args.action == 'search':
         results = search(reactions, initial_reactants, final_product, timeline)
         print(
-            f'synthesizing {final_product} from: '
+            f'synthesizing {final_product} from '
             + f'{", ".join(str(x) for x in initial_reactants)}'
+            + ' using reactions:'
         )
         print(indent(
             '\n'.join(str(reaction) for reaction in reaction_set),
             '    ',
         ))
+        count = 0
         broke = False
-        for index, result in enumerate(results, start=1):
+        for count, result in enumerate(results, start=1):
             print()
             print(f'pathway {index}:')
             print(indent(
@@ -656,7 +658,7 @@ def main():
                 break
         if not broke:
             print()
-            print('no more results')
+            print(f'no more results ({count} results total)')
     else:
         arg_parser.error(f'undefined action: {args.action}')
 
